@@ -55,7 +55,7 @@ export const STRINGS = {
   resetInstructions: 'Reset your Clearblue monitor and set it to Day 4 to minimize wait time before testing resumes.',
 
   // App info
-  appName: 'Marquette Fertility Tracker',
+  appName: 'Fidelis',
   disclaimer: 'This app is a charting tool, not a replacement for certified Marquette Method instruction.',
 
   // Goals (Church-aligned language)
