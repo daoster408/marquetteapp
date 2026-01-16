@@ -134,7 +134,10 @@ export const useCycleStore = create<CycleState>()(
 
         if (existingIndex >= 0) {
           updatedDays = [...currentCycle.days];
-          updatedDays[existingIndex] = newLog;
+          updatedDays[existingIndex] = {
+            ...updatedDays[existingIndex],
+            ...newLog,
+          };
         } else {
           updatedDays = [...currentCycle.days, newLog].sort(
             (a, b) => a.cycleDay - b.cycleDay

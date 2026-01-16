@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Card } from 'react-native-paper';
 import { useCycleStore } from '../store';
-import { getCycleDay, calculateFertilityStatus } from '../utils/marquetteAlgorithm';
+import { getCycleDay, calculateFertilityStatus, getTodayISO } from '../utils/marquetteAlgorithm';
 import { COLORS } from '../constants';
 import { DayLog, FertilityStatus } from '../types';
 
@@ -205,7 +205,7 @@ export default function CalendarScreen({ navigation }: Props) {
       const dateString = getDateString(year, month, day);
       const dayData = getDayData(dateString);
       const { log, cycleDay, status, peakDay } = dayData;
-      const isToday = dateString === new Date().toISOString().split('T')[0];
+      const isToday = dateString === getTodayISO();
       const backgroundColor = getDayColor(status, log);
       const label = getDayLabel(dayData);
 
@@ -231,7 +231,7 @@ export default function CalendarScreen({ navigation }: Props) {
           {label && (
             <Text style={[
               styles.readingLabel,
-              isCountdownDay && styles.countdownLabel
+              !!isCountdownDay && styles.countdownLabel
             ]}>
               {label}
             </Text>

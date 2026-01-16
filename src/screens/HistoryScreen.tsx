@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
-import { Text, Card, Chip, Divider } from 'react-native-paper';
+import { Text, Card, Chip, Divider, Button } from 'react-native-paper';
 import { useCycleStore } from '../store';
 import { calculateCycleStats } from '../utils/marquetteAlgorithm';
 import { COLORS } from '../constants';
 import { Cycle } from '../types';
+import AddPastCycleModal from '../components/AddPastCycleModal'; // Import the new modal component
 
 interface Props {
   navigation: any;
@@ -16,6 +17,8 @@ export default function HistoryScreen({ navigation }: Props) {
 
   const completedCycles = cycles.filter(c => c.isComplete);
   const stats = calculateCycleStats(completedCycles);
+
+  const [showAddPastCycleModal, setShowAddPastCycleModal] = useState(false);
 
   const formatDate = (dateString: string): string => {
     if (!dateString) return '';
@@ -180,6 +183,19 @@ export default function HistoryScreen({ navigation }: Props) {
         Completed Cycles
       </Text>
 
+      <Card style={styles.addPastCycleCard}>
+        <Card.Content>
+          <Button 
+            mode="contained"
+            onPress={() => setShowAddPastCycleModal(true)}
+            icon="plus-circle-outline"
+            style={styles.addPastCycleButton}
+          >
+            Add Past Cycle
+          </Button>
+        </Card.Content>
+      </Card>
+
       {completedCycles.length === 0 ? (
         <View style={styles.emptyState}>
           <Text variant="bodyLarge" style={styles.emptyText}>
@@ -197,6 +213,12 @@ export default function HistoryScreen({ navigation }: Props) {
           contentContainerStyle={styles.listContent}
         />
       )}
+
+      {/* Add Past Cycle Modal */}
+      <AddPastCycleModal
+        visible={showAddPastCycleModal}
+        onDismiss={() => setShowAddPastCycleModal(false)}
+      />
     </View>
   );
 }
@@ -309,5 +331,14 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  addPastCycleCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+  },
+  addPastCycleButton: {
+    marginVertical: 4,
   },
 });

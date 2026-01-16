@@ -30,8 +30,14 @@ export default function LogScreen({ navigation }: Props) {
   const [selectedDate, setSelectedDate] = useState(today);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Get the ISO string for selected date
-  const selectedDateISO = selectedDate.toISOString().split('T')[0];
+  // Get the ISO string for selected date (using local time)
+  const getLocalISOString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const selectedDateISO = getLocalISOString(selectedDate);
 
   // Get existing log for selected date
   const existingLog = currentCycle?.days.find(d => d.date === selectedDateISO);

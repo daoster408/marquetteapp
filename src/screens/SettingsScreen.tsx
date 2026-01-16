@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Linking, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Linking, Alert, Platform } from 'react-native';
 import { Text, Card, Switch, Divider, List, Button, Portal, Dialog } from 'react-native-paper';
 import { useCycleStore } from '../store';
 import { COLORS, STRINGS } from '../constants';
-import { importCSVFile } from '../utils/devTools';
+import { importCyclesFromUserCSV } from '../utils/importData'; // New user-facing import function
+import { exportCyclesToCSV } from '../utils/exportData'; // Import the new export function
+import Constants from 'expo-constants'; // For app version and device info
 
 interface Props {
   navigation: any;
@@ -15,6 +17,10 @@ export default function SettingsScreen({ navigation }: Props) {
   const [showMockDataDialog, setShowMockDataDialog] = useState(false);
   const [showCSVImportDialog, setShowCSVImportDialog] = useState(false);
 
+  const appVersion = Constants.expoConfig?.version || 'Unknown';
+  const deviceName = Constants.deviceName || 'Unknown';
+  const platformOS = Platform.OS;
+
   const handleResetAllData = () => {
     resetAllData();
     setShowResetDialog(false);
@@ -25,10 +31,41 @@ export default function SettingsScreen({ navigation }: Props) {
     setShowMockDataDialog(false);
   };
 
-  const handleImportCSV = () => {
-    // The actual importCSVFile handles its own Alert and state update via zustand
-    importCSVFile();
+  const handleImportCSV = async () => {
+    // This will open the dialog before actual import
+    setShowCSVImportDialog(true);
+  };
+
+  const confirmImportCSV = async () => {
     setShowCSVImportDialog(false);
+    await importCyclesFromUserCSV();
+  };
+
+  const handleExportData = async () => {
+    await exportCyclesToCSV();
+  };
+
+  const handleReportBug = () => {
+    const emailSubject = `Fidelis Bug Report - v${appVersion}`;
+    const emailBody = `\n\n---
+Device: ${deviceName}
+OS: ${platformOS}
+App Version: ${appVersion}
+---
+Please describe the bug you encountered below, including steps to reproduce it if possible:\n\n`;
+    const emailAddress = 'support@fidelisapp.com'; // Replace with your support email
+
+    const mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
+    Linking.canOpenURL(mailtoUrl)
+      .then(supported => {
+        if (supported) {
+          Linking.openURL(mailtoUrl);
+        } else {
+          Alert.alert('Cannot Open Email', 'Please configure an email client on your device.');
+        }
+      })
+      .catch(err => console.error('An error occurred', err));
   };
 
   const openMarquetteInfo = () => {
@@ -63,13 +100,13 @@ export default function SettingsScreen({ navigation }: Props) {
           </Text>
           <Button
             mode="contained"
-            onPress={() => setShowCSVImportDialog(true)}
+            onPress={handleImportCSV} // Now triggers the dialog
             style={styles.devButton}
           >
             Import Cycles from CSV
           </Button>
           <Text variant="bodySmall" style={styles.resetWarning}>
-            This will erase data and import from hardcoded CSV.
+            This will erase current data and import from a selected CSV file.
           </Text>
         </Card.Content>
       </Card>
@@ -155,6 +192,41 @@ export default function SettingsScreen({ navigation }: Props) {
             onPress={openChurchTeaching}
             style={styles.listItem}
           />
+        </Card.Content>
+      </Card>
+
+      {/* Support */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Support & Sharing
+          </Text>
+
+          <Button
+            mode="outlined"
+            onPress={handleExportData}
+            style={styles.actionButton}
+            icon="file-export-outline"
+          >
+            Export All Data (CSV)
+          </Button>
+          <Text variant="bodySmall" style={styles.actionDescription}>
+            Exports your complete cycle history to a CSV file. You can then share it via email or save to cloud storage.
+          </Text>
+
+          <Divider style={styles.divider} />
+
+          <Button
+            mode="outlined"
+            onPress={handleReportBug}
+            style={styles.actionButton}
+            icon="bug"
+          >
+            Report a Bug
+          </Button>
+          <Text variant="bodySmall" style={styles.actionDescription}>
+            Opens your email client to send a bug report to the developer, including basic app information.
+          </Text>
         </Card.Content>
       </Card>
 
@@ -261,12 +333,12 @@ export default function SettingsScreen({ navigation }: Props) {
           <Dialog.Title>Import Cycles from CSV?</Dialog.Title>
           <Dialog.Content>
             <Text variant="bodyMedium">
-              This will permanently delete all your current cycle history, logs, and settings, and replace it with data from `app/assets/import.csv`. This action cannot be undone. Ensure your `import.csv` file is correctly formatted.
+              This will permanently delete all your current cycle history, logs, and settings, and replace it with data from the selected CSV file. This action cannot be undone. Ensure your CSV file is correctly formatted.
             </Text>
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setShowCSVImportDialog(false)}>Cancel</Button>
-            <Button onPress={handleImportCSV} textColor={COLORS.primary}>
+            <Button onPress={confirmImportCSV} textColor={COLORS.primary}>
               Import CSV
             </Button>
           </Dialog.Actions>
@@ -347,5 +419,15 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 8,
     textAlign: 'center',
+  },
+  actionButton: {
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  actionDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });
