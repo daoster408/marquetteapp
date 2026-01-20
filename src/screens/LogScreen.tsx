@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, Modal } from 'react-native';
 import {
   Text,
   Card,
@@ -157,7 +157,8 @@ export default function LogScreen({ navigation }: Props) {
             Tap above to change date
           </Text>
 
-          {showDatePicker && (
+          {/* Android Date Picker (Dialog) */}
+          {showDatePicker && Platform.OS === 'android' && (
             <DateTimePicker
               value={selectedDate}
               mode="date"
@@ -165,6 +166,33 @@ export default function LogScreen({ navigation }: Props) {
               onChange={handleDateChange}
               minimumDate={minDate}
             />
+          )}
+
+          {/* iOS Date Picker (Modal) */}
+          {Platform.OS === 'ios' && (
+            <Modal
+              visible={showDatePicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Button onPress={() => setShowDatePicker(false)}>Cancel</Button>
+                    <Button onPress={() => setShowDatePicker(false)} mode="text">Done</Button>
+                  </View>
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    minimumDate={minDate}
+                    textColor="black"
+                  />
+                </View>
+              </View>
+            </Modal>
           )}
 
           <Text variant="titleMedium" style={styles.cycleDayText}>
@@ -354,5 +382,24 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     borderColor: COLORS.warning,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });
