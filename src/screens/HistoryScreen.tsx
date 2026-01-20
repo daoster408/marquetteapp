@@ -88,8 +88,8 @@ export default function HistoryScreen({ navigation }: Props) {
     );
   };
 
-  return (
-    <View style={styles.container}>
+  const renderHeader = () => (
+    <View>
       {/* Statistics Card */}
       {stats.totalCycles > 0 && (
         <Card style={styles.statsCard}>
@@ -178,7 +178,6 @@ export default function HistoryScreen({ navigation }: Props) {
         </Card>
       )}
 
-      {/* Completed Cycles List */}
       <Text variant="titleMedium" style={styles.sectionTitle}>
         Completed Cycles
       </Text>
@@ -195,24 +194,28 @@ export default function HistoryScreen({ navigation }: Props) {
           </Button>
         </Card.Content>
       </Card>
+    </View>
+  );
 
-      {completedCycles.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text variant="bodyLarge" style={styles.emptyText}>
-            No completed cycles yet.
-          </Text>
-          <Text variant="bodyMedium" style={styles.emptySubtext}>
-            Your cycle history will appear here once you start a new cycle.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={[...completedCycles].reverse()}
-          renderItem={renderCycleItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={[...completedCycles].reverse()}
+        renderItem={renderCycleItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text variant="bodyLarge" style={styles.emptyText}>
+              No completed cycles yet.
+            </Text>
+            <Text variant="bodyMedium" style={styles.emptySubtext}>
+              Your cycle history will appear here once you start a new cycle.
+            </Text>
+          </View>
+        }
+      />
 
       {/* Add Past Cycle Modal */}
       <AddPastCycleModal
