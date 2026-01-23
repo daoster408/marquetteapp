@@ -40,15 +40,18 @@
 ### Alerts & UX
 - [x] Implement CD25 no-Peak warning
 - [x] Implement monitor reset guidance
-- [ ] Add helpful tooltips/explanations
+- [x] **Inclusive Language Review ("Low Fertility" vs "Infertile")**
+- [x] **Goal Selection (TTC vs TTA Modes)**
+- [x] Add helpful tooltips/explanations
 
 ### Data Management & Beta Features
 - [x] Add reset all data functionality
 - [x] Confirmation dialog for destructive actions
-- [x] **Export Data to CSV (Native Share)**
-- [x] **Bug Report (Email Link)**
+- [x] **Export Data to CSV (Wide Format for Doctors)**
+- [x] **Bug Report & Feedback System**
 - [x] **Import Historical Cycles (Manual Entry Wizard)**
 - [x] Import Raw CSV (Developer Tool only)
+- [x] **EAS Update (OTA) Support Configured**
 
 ### Build & Deployment
 - [x] Set up EAS Build
@@ -96,6 +99,7 @@
 - [ ] User accounts/authentication
 - [ ] Couples sharing feature
 - [ ] Instructor connectivity
+- [ ] **Implement photo storage for daily logs (Test sticks)**
 - [ ] Breastfeeding protocol
 - [ ] Perimenopause protocol
 - [ ] Transition off hormones protocol

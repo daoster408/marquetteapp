@@ -43,7 +43,8 @@ export default function DashboardScreen({ navigation }: Props) {
         currentCycle,
         todaysCycleDay,
         completedCycles,
-        settings.conservativeMode
+        settings.conservativeMode,
+        settings.intention // Pass intention here
       )
     : null;
 
@@ -179,7 +180,7 @@ export default function DashboardScreen({ navigation }: Props) {
                   : `Countdown Day ${todaysCycleDay - (currentCycle.peakDay + 1)} of 3`}
               </Text>
               <Text variant="bodyMedium" style={styles.countdownSub}>
-                {fertilityWindow.daysUntilSafe} day(s) until infertile
+                {fertilityWindow.daysUntilSafe} day(s) until low fertility
               </Text>
             </View>
           )}

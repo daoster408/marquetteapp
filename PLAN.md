@@ -56,13 +56,24 @@ A Catholic-aligned fertility tracking app implementing the Marquette Method of N
 - If no Peak and period comes: End cycle, start fresh
 
 ### MVP Features
-1. **Cycle Management** - Start new cycle, save/view history
-2. **Daily Logging** - Monitor readings (Low/High/Peak/No Test), optional notes, intercourse
-3. **Dashboard** - Current cycle day, fertility status, countdown to fertile window end
-4. **Calendar View** - Color-coded monthly view (green=infertile, red/orange=fertile, blue=period)
-5. **Cycle History** - Past cycles list, Peak days recorded
-6. **Alerts** - CD25 no-Peak warning, reset guidance
-7. **Settings** - Conservative mode toggle
+
+1.  **Cycle Management** - Start new cycle, save/view history
+
+2.  **Daily Logging** - Monitor readings (Low/High/Peak/No Test), optional notes, intercourse
+
+3.  **Dashboard** - Current cycle day, fertility status, countdown to fertile window end
+
+4.  **TTC / TTA Modes** - Toggle between "Achieve" and "Postpone" to change guidance language
+
+5.  **Calendar View** - Color-coded monthly view (green=low fertility, red/orange=fertile, blue=period)
+
+6.  **Cycle History** - Past cycles list, Peak days recorded
+
+7.  **Alerts** - CD25 no-Peak warning, reset guidance
+
+8.  **Settings** - Conservative mode toggle, Goal selection
+
+9.  **Doctor Export** - Wide-format CSV "Cycle Sheet" for instructors/doctors
 
 ### Data Model Requirements
 - Track Peak day for every cycle
@@ -108,11 +119,12 @@ No AI - just data visualization from user's own history.
 
 ## Phase 3: Future Features
 
-- Cloud sync / user accounts
-- Couples data sharing
-- Instructor connectivity / chart sharing
-- Breastfeeding protocol
-- Perimenopause protocol
+- [ ] Cloud sync / user accounts
+- [ ] Couples data sharing
+- [ ] Instructor connectivity / chart sharing
+- [ ] **Photo logging for test sticks (Monitor & LH strips)**
+- [ ] Breastfeeding protocol
+- [ ] Perimenopause protocol
 - Transition off hormones protocol
 - Cervical mucus cross-check option
 - Export/print charts

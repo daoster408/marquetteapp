@@ -319,7 +319,7 @@ export default function CalendarScreen({ navigation }: Props) {
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendColor, { backgroundColor: COLORS.infertile }]} />
-              <Text style={styles.legendText}>Infertile</Text>
+              <Text style={styles.legendText}>Low Fertility</Text>
             </View>
             <View style={styles.legendItem}>
               <Text style={styles.legendLabel}>L</Text>

@@ -29,7 +29,7 @@ export const COLORS = {
 export const STRINGS = {
   // Fertility status messages
   statusFertile: 'Fertile Window',
-  statusInfertile: 'Infertile',
+  statusInfertile: 'Low Fertility',
   statusPeriod: 'Menstruation',
   statusWaiting: 'Waiting for Peak',
 
@@ -45,10 +45,10 @@ export const STRINGS = {
   readingNone: 'No Test',
 
   // Guidance messages
-  fertileGuidance: 'Fertile window is open. Abstain if postponing pregnancy.',
-  infertileGuidance: 'Infertile time. Safe for intercourse if postponing.',
+  fertileGuidance: 'Fertile window is open.',
+  infertileGuidance: 'Low fertility time.',
   waitingForPeak: 'Continue testing daily until Peak reading.',
-  afterPeakGuidance: 'Peak recorded. Continue to abstain for 3 full days after second Peak.',
+  afterPeakGuidance: 'Peak recorded. Count 3 full days after second Peak.',
 
   // Alerts
   day25Warning: 'No Peak detected by Cycle Day 25. Please reset your monitor.',

@@ -71,7 +71,8 @@ export function calculateFertilityStatus(
   cycle: Cycle,
   currentCycleDay: number,
   completedCycles: Cycle[],
-  conservativeMode: boolean = false
+  conservativeMode: boolean = false,
+  intention: 'TTA' | 'TTC' = 'TTA'
 ): FertilityWindow {
   const completedCycleCount = completedCycles.length;
   const earliestPeak = getEarliestPeakInLastCycles(completedCycles);
@@ -81,11 +82,27 @@ export function calculateFertilityStatus(
     conservativeMode
   );
 
+  // Messages based on Intention
+  const msgPeriod = STRINGS.statusPeriod;
+  const msgInfertile = intention === 'TTC' 
+    ? 'Low chance of conception.' 
+    : STRINGS.infertileGuidance;
+  const msgFertile = intention === 'TTC'
+    ? 'High chance of conception! Intercourse recommended.'
+    : STRINGS.fertileGuidance; // "Abstain if postponing"
+  const msgWaiting = intention === 'TTC'
+    ? 'Continue testing to find Peak fertility.'
+    : STRINGS.waitingForPeak;
+  const msgAfterPeak = intention === 'TTC'
+    ? 'Peak passed. Chance of conception decreasing.'
+    : STRINGS.afterPeakGuidance; // "Abstain for 3 days"
+
+
   // Period days (CD1-5)
   if (currentCycleDay <= 5) {
     return {
       status: 'period',
-      message: STRINGS.statusPeriod,
+      message: msgPeriod,
     };
   }
 
@@ -104,7 +121,7 @@ export function calculateFertilityStatus(
       return {
         status: 'infertile',
         fertileWindowEnd,
-        message: STRINGS.infertileGuidance,
+        message: msgInfertile,
       };
     } else if (currentCycleDay > peakDay) {
       // After Peak, counting down
@@ -113,7 +130,7 @@ export function calculateFertilityStatus(
         status: 'fertile',
         fertileWindowEnd,
         daysUntilSafe,
-        message: `${STRINGS.afterPeakGuidance} ${daysUntilSafe} day(s) remaining.`,
+        message: `${msgAfterPeak} ${intention === 'TTA' ? daysUntilSafe + ' day(s) remaining.' : ''}`,
       };
     }
   }
@@ -154,7 +171,7 @@ export function calculateFertilityStatus(
     return {
       status: 'fertile',
       fertileWindowStart: Math.min(calculatedFertilityStart, firstHighDay || 999),
-      message: STRINGS.waitingForPeak,
+      message: msgFertile, // "High chance" or "Abstain"
     };
   }
 
@@ -162,7 +179,9 @@ export function calculateFertilityStatus(
   return {
     status: 'infertile',
     fertileWindowStart: calculatedFertilityStart,
-    message: `Infertile until ${firstHighDay ? 'first High reading or ' : ''}Cycle Day ${calculatedFertilityStart}.`,
+    message: intention === 'TTC' 
+      ? `Low chance until around Cycle Day ${calculatedFertilityStart}.`
+      : `Low Fertility until ${firstHighDay ? 'first High reading or ' : ''}Cycle Day ${calculatedFertilityStart}.`,
   };
 }
 

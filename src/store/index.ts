@@ -48,6 +48,7 @@ export const useCycleStore = create<CycleState>()(
       settings: {
         conservativeMode: false,
         notificationsEnabled: true,
+        intention: 'TTA',
       },
 
       // Start a new cycle
@@ -290,6 +291,7 @@ export const useCycleStore = create<CycleState>()(
           settings: {
             conservativeMode: false,
             notificationsEnabled: true,
+            intention: 'TTA',
           },
         });
       },
@@ -303,6 +305,7 @@ export const useCycleStore = create<CycleState>()(
           settings: { // Reset settings to default
             conservativeMode: false,
             notificationsEnabled: true,
+            intention: 'TTA',
           },
         });
       },
@@ -316,6 +319,7 @@ export const useCycleStore = create<CycleState>()(
           settings: { // Reset settings to default
             conservativeMode: false,
             notificationsEnabled: true,
+            intention: 'TTA',
           },
         });
       },

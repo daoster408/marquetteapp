@@ -32,6 +32,7 @@ export interface AppSettings {
   conservativeMode: boolean; // Always start fertility on CD6
   notificationsEnabled: boolean;
   reminderTime?: string; // Time for daily testing reminder
+  intention: 'TTA' | 'TTC'; // Trying to Avoid (TTA) or Trying to Conceive (TTC)
 }
 
 // Fertility window calculation result

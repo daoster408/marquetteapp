@@ -111,6 +111,39 @@ Please describe the bug you encountered below, including steps to reproduce it i
         </Card.Content>
       </Card>
 
+      {/* Intention Settings */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Your Goal
+          </Text>
+
+          <View style={styles.intentionContainer}>
+            <Button 
+              mode={settings.intention === 'TTA' ? 'contained' : 'outlined'}
+              onPress={() => updateSettings({ intention: 'TTA' })}
+              style={styles.intentionButton}
+              icon="shield-check"
+            >
+              Avoid Pregnancy
+            </Button>
+            
+            <Button 
+              mode={settings.intention === 'TTC' ? 'contained' : 'outlined'}
+              onPress={() => updateSettings({ intention: 'TTC' })}
+              style={styles.intentionButton}
+              icon="baby-carriage"
+            >
+              Achieve Pregnancy
+            </Button>
+          </View>
+          
+          <Text variant="bodySmall" style={styles.settingDescription}>
+            This changes the guidance messages on your dashboard. The algorithm calculations remain the same.
+          </Text>
+        </Card.Content>
+      </Card>
+
       {/* Algorithm Settings */}
       <Card style={styles.card}>
         <Card.Content>
@@ -370,6 +403,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 16,
     color: COLORS.primary,
+  },
+  intentionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 8,
+  },
+  intentionButton: {
+    flex: 1,
   },
   settingRow: {
     flexDirection: 'row',
