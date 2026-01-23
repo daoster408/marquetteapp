@@ -1,6 +1,9 @@
 // Monitor reading types
 export type MonitorReading = 'low' | 'high' | 'peak' | 'none';
 
+// Bleeding intensity
+export type BleedingLevel = 'heavy' | 'medium' | 'light' | 'spotting' | 'none';
+
 // Fertility status
 export type FertilityStatus = 'fertile' | 'infertile' | 'period' | 'waiting';
 
@@ -9,6 +12,7 @@ export interface DayLog {
   date: string; // ISO date string (YYYY-MM-DD)
   cycleDay: number;
   reading: MonitorReading;
+  bleeding?: BleedingLevel; // Menstrual flow intensity
   notes?: string;
   isAutoPeak?: boolean; // True for the auto-recorded 2nd Peak
   isMonitorReset?: boolean; // True if monitor was reset on this day

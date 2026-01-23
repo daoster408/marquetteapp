@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Cycle, DayLog, MonitorReading, AppSettings } from '../types';
+import { Cycle, DayLog, MonitorReading, AppSettings, BleedingLevel } from '../types';
 import {
   generateId,
   getTodayISO,
@@ -19,8 +19,8 @@ interface CycleState {
 
   // Actions
   startNewCycle: (startDate?: string) => void;
-  logDay: (reading: MonitorReading, notes?: string) => void;
-  logDayForDate: (date: string, reading: MonitorReading, notes?: string) => void;
+  logDay: (reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => void;
+  logDayForDate: (date: string, reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
   markMonitorReset: () => void;
   toggleIntercourse: (date: string) => void;
@@ -100,13 +100,13 @@ export const useCycleStore = create<CycleState>()(
       },
 
       // Log today's reading
-      logDay: (reading: MonitorReading, notes?: string) => {
+      logDay: (reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => {
         const today = getTodayISO();
-        get().logDayForDate(today, reading, notes);
+        get().logDayForDate(today, reading, bleeding, notes);
       },
 
       // Log a specific date's reading
-      logDayForDate: (date: string, reading: MonitorReading, notes?: string) => {
+      logDayForDate: (date: string, reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => {
         const state = get();
         if (!state.currentCycleId) return;
 
@@ -125,6 +125,7 @@ export const useCycleStore = create<CycleState>()(
           date,
           cycleDay,
           reading,
+          bleeding,
           notes,
           isAutoPeak,
         };
@@ -135,9 +136,16 @@ export const useCycleStore = create<CycleState>()(
 
         if (existingIndex >= 0) {
           updatedDays = [...currentCycle.days];
+          // Merge with existing log to preserve fields not being updated if we were partially updating
+          // But here we are overwriting core fields. 
+          // However, we want to ensure we don't lose 'intercourse' if it's not passed here (it's not).
+          // 'newLog' doesn't have intercourse field, so spreading newLog over existingLog would be safer if we want to preserve intercourse.
+          
           updatedDays[existingIndex] = {
             ...updatedDays[existingIndex],
             ...newLog,
+            // Explicitly preserve intercourse if it exists in the old log
+            intercourse: updatedDays[existingIndex].intercourse
           };
         } else {
           updatedDays = [...currentCycle.days, newLog].sort(

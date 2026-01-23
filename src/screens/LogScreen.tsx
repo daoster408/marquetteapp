@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, Modal, TouchableOpacity } from 'react-native';
 import {
   Text,
   Card,
@@ -9,12 +9,14 @@ import {
   Snackbar,
   List,
   Switch,
+  IconButton,
+  Divider,
 } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCycleStore } from '../store';
 import { getTodayISO, getCycleDay } from '../utils/marquetteAlgorithm';
 import { COLORS, STRINGS } from '../constants';
-import { MonitorReading } from '../types';
+import { MonitorReading, BleedingLevel } from '../types';
 
 interface Props {
   navigation: any;
@@ -30,7 +32,7 @@ export default function LogScreen({ navigation }: Props) {
   const [selectedDate, setSelectedDate] = useState(today);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Get the ISO string for selected date (using local time)
+  // Get the ISO string for selected date
   const getLocalISOString = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -39,27 +41,48 @@ export default function LogScreen({ navigation }: Props) {
   };
   const selectedDateISO = getLocalISOString(selectedDate);
 
-  // Get existing log for selected date
+  // Get existing log
   const existingLog = currentCycle?.days.find(d => d.date === selectedDateISO);
 
-  // Calculate cycle day for selected date
+  // Calculate cycle day
   const selectedCycleDay = currentCycle
     ? getCycleDay(currentCycle, selectedDateISO)
     : null;
 
+  // Form State
   const [selectedReading, setSelectedReading] = useState<MonitorReading>(
     existingLog?.reading || 'none'
   );
+  const [selectedBleeding, setSelectedBleeding] = useState<BleedingLevel>(
+    existingLog?.bleeding || 'none'
+  );
   const [notes, setNotes] = useState(existingLog?.notes || '');
+  
+  // Section Expansion State
+  const [isBleedingExpanded, setIsBleedingExpanded] = useState(true);
+  const [isMonitorExpanded, setIsMonitorExpanded] = useState(false);
+
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  // Update form when date changes
+  // Update form and expansion defaults when date changes
   React.useEffect(() => {
     const log = currentCycle?.days.find(d => d.date === selectedDateISO);
     setSelectedReading(log?.reading || 'none');
+    setSelectedBleeding(log?.bleeding || 'none');
     setNotes(log?.notes || '');
-  }, [selectedDateISO, currentCycle]);
+
+    // Smart Expansion Logic
+    if (selectedCycleDay) {
+      if (selectedCycleDay <= 5) {
+        setIsBleedingExpanded(true);
+        setIsMonitorExpanded(false);
+      } else {
+        setIsBleedingExpanded(false);
+        setIsMonitorExpanded(true);
+      }
+    }
+  }, [selectedDateISO, currentCycle, selectedCycleDay]);
 
   const handleDateChange = (event: any, date?: Date) => {
     if (Platform.OS === 'android') {
@@ -71,7 +94,12 @@ export default function LogScreen({ navigation }: Props) {
   };
 
   const handleSave = () => {
-    logDayForDate(selectedDateISO, selectedReading, notes.trim() || undefined);
+    logDayForDate(
+      selectedDateISO, 
+      selectedReading, 
+      selectedBleeding, 
+      notes.trim() || undefined
+    );
     setSnackbarMessage('Log saved successfully!');
     setShowSnackbar(true);
     setTimeout(() => {
@@ -95,7 +123,6 @@ export default function LogScreen({ navigation }: Props) {
     return isToday ? `${formatted} (Today)` : formatted;
   };
 
-  // Min date is cycle start (can't log before cycle began)
   const minDate = currentCycle ? new Date(currentCycle.startDate) : undefined;
 
   const readingOptions = [
@@ -107,17 +134,28 @@ export default function LogScreen({ navigation }: Props) {
 
   const getReadingDescription = (reading: MonitorReading): string => {
     switch (reading) {
-      case 'low':
-        return 'Low fertility indicator. Estrogen levels are baseline.';
-      case 'high':
-        return 'High fertility indicator. Estrogen is rising - fertile window is open.';
-      case 'peak':
-        return 'Peak fertility! LH surge detected. Ovulation is imminent. Stop testing - Peak will auto-record tomorrow.';
-      case 'none':
-        return 'No test taken today.';
-      default:
-        return '';
+      case 'low': return 'Low fertility indicator. Estrogen levels are baseline.';
+      case 'high': return 'High fertility indicator. Estrogen is rising - fertile window is open.';
+      case 'peak': return 'Peak fertility! LH surge detected. Ovulation is imminent.';
+      case 'none': return 'No test taken today.';
+      default: return '';
     }
+  };
+
+  // Bleeding Selector Component
+  const renderBleedingOption = (level: BleedingLevel, icon: string, label: string) => {
+    const isSelected = selectedBleeding === level;
+    return (
+      <TouchableOpacity 
+        style={[styles.bleedingOption, isSelected && styles.bleedingOptionSelected]}
+        onPress={() => setSelectedBleeding(level)}
+      >
+        <Text style={{ fontSize: 24 }}>{icon}</Text>
+        <Text variant="labelSmall" style={[styles.bleedingLabel, isSelected && styles.bleedingLabelSelected]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   if (!currentCycle) {
@@ -125,11 +163,7 @@ export default function LogScreen({ navigation }: Props) {
       <View style={styles.container}>
         <View style={styles.centerContent}>
           <Text variant="bodyLarge">No active cycle. Start a new cycle first.</Text>
-          <Button
-            mode="contained"
-            onPress={() => navigation.goBack()}
-            style={styles.button}
-          >
+          <Button mode="contained" onPress={() => navigation.goBack()} style={styles.button}>
             Go Back
           </Button>
         </View>
@@ -139,12 +173,10 @@ export default function LogScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Date Selection */}
+      {/* Date Header */}
       <Card style={styles.headerCard}>
         <Card.Content>
-          <Text variant="labelMedium" style={styles.dateLabel}>
-            Logging for:
-          </Text>
+          <Text variant="labelMedium" style={styles.dateLabel}>Logging for:</Text>
           <Button
             mode="outlined"
             onPress={() => setShowDatePicker(true)}
@@ -153,43 +185,21 @@ export default function LogScreen({ navigation }: Props) {
           >
             {formatDisplayDate(selectedDate)}
           </Button>
-          <Text variant="bodySmall" style={styles.changeDateText}>
-            Tap above to change date
-          </Text>
+          <Text variant="bodySmall" style={styles.changeDateText}>Tap to change date</Text>
 
-          {/* Android Date Picker (Dialog) */}
+          {/* Date Pickers */}
           {showDatePicker && Platform.OS === 'android' && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display="default"
-              onChange={handleDateChange}
-              minimumDate={minDate}
-            />
+            <DateTimePicker value={selectedDate} mode="date" display="default" onChange={handleDateChange} minimumDate={minDate} />
           )}
-
-          {/* iOS Date Picker (Modal) */}
           {Platform.OS === 'ios' && (
-            <Modal
-              visible={showDatePicker}
-              transparent={true}
-              animationType="slide"
-              onRequestClose={() => setShowDatePicker(false)}
-            >
+            <Modal visible={showDatePicker} transparent={true} animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
               <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
                     <Button onPress={() => setShowDatePicker(false)}>Cancel</Button>
                     <Button onPress={() => setShowDatePicker(false)} mode="text">Done</Button>
                   </View>
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display="spinner"
-                    onChange={handleDateChange}
-                    minimumDate={minDate}
-                    textColor="black"
-                  />
+                  <DateTimePicker value={selectedDate} mode="date" display="spinner" onChange={handleDateChange} minimumDate={minDate} textColor="black" />
                 </View>
               </View>
             </Modal>
@@ -201,25 +211,65 @@ export default function LogScreen({ navigation }: Props) {
         </Card.Content>
       </Card>
 
-      {/* Monitor Reading Selection */}
+      {/* Menstrual Flow Section (Collapsible) */}
       <Card style={styles.card}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Monitor Reading
-          </Text>
-          <SegmentedButtons
-            value={selectedReading}
-            onValueChange={(value) => setSelectedReading(value as MonitorReading)}
-            buttons={readingOptions}
-            style={styles.segmentedButtons}
+        <TouchableOpacity onPress={() => setIsBleedingExpanded(!isBleedingExpanded)}>
+          <Card.Title
+            title="Menstrual Flow"
+            right={(props) => <IconButton {...props} icon={isBleedingExpanded ? "chevron-up" : "chevron-down"} />}
           />
-          <Text variant="bodySmall" style={styles.readingDescription}>
-            {getReadingDescription(selectedReading)}
-          </Text>
-        </Card.Content>
+        </TouchableOpacity>
+        {isBleedingExpanded && (
+          <Card.Content>
+            <View style={styles.bleedingContainer}>
+              {renderBleedingOption('none', '∅', 'None')}
+              {renderBleedingOption('spotting', '🩸', 'Spotting')}
+              {renderBleedingOption('light', '🩸', 'Light')}
+              {renderBleedingOption('medium', '🩸🩸', 'Medium')}
+              {renderBleedingOption('heavy', '🩸🩸🩸', 'Heavy')}
+            </View>
+          </Card.Content>
+        )}
+        {!isBleedingExpanded && selectedBleeding !== 'none' && (
+          <Card.Content>
+             <Text variant="bodyMedium" style={styles.collapsedSummary}>
+               Selected: <Text style={{fontWeight: 'bold'}}>{selectedBleeding.charAt(0).toUpperCase() + selectedBleeding.slice(1)}</Text>
+             </Text>
+          </Card.Content>
+        )}
       </Card>
 
-      {/* Intercourse Logging */}
+      {/* Monitor Reading Section (Collapsible) */}
+      <Card style={styles.card}>
+        <TouchableOpacity onPress={() => setIsMonitorExpanded(!isMonitorExpanded)}>
+          <Card.Title
+            title="Monitor Reading"
+            right={(props) => <IconButton {...props} icon={isMonitorExpanded ? "chevron-up" : "chevron-down"} />}
+          />
+        </TouchableOpacity>
+        {isMonitorExpanded && (
+          <Card.Content>
+            <SegmentedButtons
+              value={selectedReading}
+              onValueChange={(value) => setSelectedReading(value as MonitorReading)}
+              buttons={readingOptions}
+              style={styles.segmentedButtons}
+            />
+            <Text variant="bodySmall" style={styles.readingDescription}>
+              {getReadingDescription(selectedReading)}
+            </Text>
+          </Card.Content>
+        )}
+         {!isMonitorExpanded && selectedReading !== 'none' && (
+          <Card.Content>
+             <Text variant="bodyMedium" style={styles.collapsedSummary}>
+               Selected: <Text style={{fontWeight: 'bold'}}>{selectedReading.toUpperCase()}</Text>
+             </Text>
+          </Card.Content>
+        )}
+      </Card>
+
+      {/* Intercourse */}
       <Card style={styles.card}>
         <List.Item
           title="Log Intercourse"
@@ -238,12 +288,10 @@ export default function LogScreen({ navigation }: Props) {
       {/* Notes */}
       <Card style={styles.card}>
         <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Notes (Optional)
-          </Text>
+          <Text variant="titleMedium" style={styles.sectionTitle}>Notes</Text>
           <TextInput
             mode="outlined"
-            placeholder="Add any notes for this day..."
+            placeholder="Add notes..."
             value={notes}
             onChangeText={setNotes}
             multiline
@@ -254,42 +302,26 @@ export default function LogScreen({ navigation }: Props) {
       </Card>
 
       {/* Save Button */}
-      <Button
-        mode="contained"
-        onPress={handleSave}
-        style={styles.saveButton}
-      >
+      <Button mode="contained" onPress={handleSave} style={styles.saveButton}>
         {existingLog ? 'Update Log' : 'Save Log'}
       </Button>
 
-      {/* Monitor Reset Option (for CD25+) */}
+      {/* Monitor Reset */}
       {selectedCycleDay && selectedCycleDay >= 25 && (
         <Card style={styles.resetCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.resetTitle}>
-              Monitor Reset
-            </Text>
+            <Text variant="titleMedium" style={styles.resetTitle}>Monitor Reset</Text>
             <Text variant="bodyMedium" style={styles.resetText}>
-              If no Peak has been detected and you've reset your Clearblue monitor,
-              tap below to record the reset.
+              If no Peak has been detected and you've reset your monitor, tap below.
             </Text>
-            <Button
-              mode="outlined"
-              onPress={handleMonitorReset}
-              style={styles.resetButton}
-            >
+            <Button mode="outlined" onPress={handleMonitorReset} style={styles.resetButton}>
               Record Monitor Reset
             </Button>
           </Card.Content>
         </Card>
       )}
 
-      {/* Snackbar */}
-      <Snackbar
-        visible={showSnackbar}
-        onDismiss={() => setShowSnackbar(false)}
-        duration={2000}
-      >
+      <Snackbar visible={showSnackbar} onDismiss={() => setShowSnackbar(false)} duration={2000}>
         {snackbarMessage}
       </Snackbar>
     </ScrollView>
@@ -315,91 +347,54 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 12,
   },
-  dateLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 8,
-  },
-  dateButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderColor: 'rgba(255,255,255,0.5)',
-    marginBottom: 4,
-  },
-  dateButtonLabel: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  changeDateText: {
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-  },
-  cycleDayText: {
-    color: '#FFF',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
-  },
-  card: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-  },
-  sectionTitle: {
-    marginBottom: 12,
-    color: COLORS.text,
-  },
-  segmentedButtons: {
-    marginBottom: 12,
-  },
-  readingDescription: {
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-  },
-  intercourseItem: {
-    paddingVertical: 8,
-  },
-  notesInput: {
-    backgroundColor: COLORS.surface,
-  },
-  saveButton: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  resetCard: {
-    marginHorizontal: 16,
-    marginBottom: 32,
-    backgroundColor: '#FFF3E0',
-    borderRadius: 12,
-  },
-  resetTitle: {
-    color: COLORS.warning,
-    marginBottom: 8,
-  },
-  resetText: {
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  resetButton: {
-    borderColor: COLORS.warning,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
-  },
-  modalHeader: {
+  dateLabel: { color: 'rgba(255,255,255,0.7)', marginBottom: 8 },
+  dateButton: { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.5)', marginBottom: 4 },
+  dateButtonLabel: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  changeDateText: { color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
+  cycleDayText: { color: '#FFF', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' },
+  card: { marginHorizontal: 16, marginBottom: 16, borderRadius: 12 },
+  sectionTitle: { marginBottom: 12, color: COLORS.text },
+  segmentedButtons: { marginBottom: 12 },
+  readingDescription: { color: COLORS.textSecondary, fontStyle: 'italic' },
+  intercourseItem: { paddingVertical: 8 },
+  notesInput: { backgroundColor: COLORS.surface },
+  saveButton: { marginHorizontal: 16, marginBottom: 16 },
+  resetCard: { marginHorizontal: 16, marginBottom: 32, backgroundColor: '#FFF3E0', borderRadius: 12 },
+  resetTitle: { color: COLORS.warning, marginBottom: 8 },
+  resetText: { color: COLORS.text, marginBottom: 12 },
+  resetButton: { borderColor: COLORS.warning },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  // Bleeding Styles
+  bleedingContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    alignItems: 'center',
+    marginTop: 8,
   },
+  bleedingOption: {
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  bleedingOptionSelected: {
+    backgroundColor: '#FFEBEE', // Very light red
+    borderColor: COLORS.fertile,
+  },
+  bleedingLabel: {
+    marginTop: 4,
+    color: COLORS.textSecondary,
+    fontSize: 10,
+  },
+  bleedingLabelSelected: {
+    color: COLORS.fertile,
+    fontWeight: 'bold',
+  },
+  collapsedSummary: {
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+  }
 });
