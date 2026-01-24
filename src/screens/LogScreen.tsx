@@ -143,7 +143,7 @@ export default function LogScreen({ navigation }: Props) {
   };
 
   // Bleeding Selector Component
-  const renderBleedingOption = (level: BleedingLevel, icon: string, label: string) => {
+  const renderBleedingOption = (level: BleedingLevel, icon: string) => {
     const isSelected = selectedBleeding === level;
     return (
       <TouchableOpacity 
@@ -151,9 +151,6 @@ export default function LogScreen({ navigation }: Props) {
         onPress={() => setSelectedBleeding(level)}
       >
         <Text style={{ fontSize: 24 }}>{icon}</Text>
-        <Text variant="labelSmall" style={[styles.bleedingLabel, isSelected && styles.bleedingLabelSelected]}>
-          {label}
-        </Text>
       </TouchableOpacity>
     );
   };
@@ -222,11 +219,10 @@ export default function LogScreen({ navigation }: Props) {
         {isBleedingExpanded && (
           <Card.Content>
             <View style={styles.bleedingContainer}>
-              {renderBleedingOption('none', '∅', 'None')}
-              {renderBleedingOption('spotting', '🩸', 'Spotting')}
-              {renderBleedingOption('light', '🩸', 'Light')}
-              {renderBleedingOption('medium', '🩸🩸', 'Medium')}
-              {renderBleedingOption('heavy', '🩸🩸🩸', 'Heavy')}
+              {renderBleedingOption('none', '∅')}
+              {renderBleedingOption('light', '🩸')}
+              {renderBleedingOption('medium', '🩸🩸')}
+              {renderBleedingOption('heavy', '🩸🩸🩸')}
             </View>
           </Card.Content>
         )}
@@ -383,15 +379,6 @@ const styles = StyleSheet.create({
   bleedingOptionSelected: {
     backgroundColor: '#FFEBEE', // Very light red
     borderColor: COLORS.fertile,
-  },
-  bleedingLabel: {
-    marginTop: 4,
-    color: COLORS.textSecondary,
-    fontSize: 10,
-  },
-  bleedingLabelSelected: {
-    color: COLORS.fertile,
-    fontWeight: 'bold',
   },
   collapsedSummary: {
     color: COLORS.textSecondary,

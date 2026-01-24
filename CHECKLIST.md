@@ -77,6 +77,7 @@
 - [x] Luteal phase length calculation
 - [ ] Cycle length trend chart
 - [ ] Historical data visualization
+- [ ] **Implement smart reset warning (based on first actual test day)**
 - [ ] Analytics screen UI
 
 ---

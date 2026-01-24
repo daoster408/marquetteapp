@@ -52,8 +52,8 @@ Device: ${deviceName}
 OS: ${platformOS}
 App Version: ${appVersion}
 ---
-Please describe the bug you encountered below, including steps to reproduce it if possible:\n\n`;
-    const emailAddress = 'support@fidelisapp.com'; // Replace with your support email
+Please describe the bug or feedback below:\n\n`;
+    const emailAddress = 'coba.consultant@gmail.com'; 
 
     const mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
@@ -79,37 +79,39 @@ Please describe the bug you encountered below, including steps to reproduce it i
   return (
     <ScrollView style={styles.container}>
       {/* --- DEVELOPER TOOLS --- */}
-      <Card style={[styles.card, styles.devCard]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Developer Tools (BETA)
-          </Text>
-          <Text variant="bodySmall" style={styles.dataInfo}>
-            These tools are for testing purposes.
-          </Text>
-          <Button
-            mode="contained"
-            onPress={() => setShowMockDataDialog(true)}
-            style={styles.devButton}
-          >
-            Load 7 Mock Cycles
-          </Button>
-          <Text variant="bodySmall" style={styles.resetWarning}>
-            This will erase your current data and create a fresh set of 7
-            completed cycles and 1 current cycle.
-          </Text>
-          <Button
-            mode="contained"
-            onPress={handleImportCSV} // Now triggers the dialog
-            style={styles.devButton}
-          >
-            Import Cycles from CSV
-          </Button>
-          <Text variant="bodySmall" style={styles.resetWarning}>
-            This will erase current data and import from a selected CSV file.
-          </Text>
-        </Card.Content>
-      </Card>
+      {__DEV__ && (
+        <Card style={[styles.card, styles.devCard]}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Developer Tools (BETA)
+            </Text>
+            <Text variant="bodySmall" style={styles.dataInfo}>
+              These tools are for testing purposes.
+            </Text>
+            <Button
+              mode="contained"
+              onPress={() => setShowMockDataDialog(true)}
+              style={styles.devButton}
+            >
+              Load 7 Mock Cycles
+            </Button>
+            <Text variant="bodySmall" style={styles.resetWarning}>
+              This will erase your current data and create a fresh set of 7
+              completed cycles and 1 current cycle.
+            </Text>
+            <Button
+              mode="contained"
+              onPress={handleImportCSV} // Now triggers the dialog
+              style={styles.devButton}
+            >
+              Import Cycles from CSV
+            </Button>
+            <Text variant="bodySmall" style={styles.resetWarning}>
+              This will erase current data and import from a selected CSV file.
+            </Text>
+          </Card.Content>
+        </Card>
+      )}
 
       {/* Intention Settings */}
       <Card style={styles.card}>

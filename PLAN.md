@@ -84,14 +84,13 @@ A Catholic-aligned fertility tracking app implementing the Marquette Method of N
 
 ## Phase 1.5: Analytics & Insights
 
-Cycle analytics to help users understand their patterns:
-- Average cycle length (with trend chart)
-- Average Peak day
-- Luteal phase length (Peak to period)
-- Cycle length variation over time
-- Visual charts/graphs of historical data
-
-No AI - just data visualization from user's own history.
+- [x] Average cycle length calculation (in History screen)
+- [x] Average Peak day calculation (in History screen)
+- [x] Luteal phase calculation
+- [ ] Cycle length trend chart
+- [ ] Historical data visualization
+- [ ] **Smart Monitor Reset Logic** (Dynamically detect test start day CD6-CD9 for accurate CD25 warning)
+- [ ] Analytics screen UI
 
 ---
 
