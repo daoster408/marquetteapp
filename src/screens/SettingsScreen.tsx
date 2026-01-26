@@ -53,7 +53,7 @@ OS: ${platformOS}
 App Version: ${appVersion}
 ---
 Please describe the bug or feedback below:\n\n`;
-    const emailAddress = 'coba.consultant@gmail.com'; 
+    const emailAddress = 'fidelis.app.beta@gmail.com'; 
 
     const mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
