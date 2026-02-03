@@ -43,6 +43,7 @@
 - [x] **Inclusive Language Review ("Low Fertility" vs "Infertile")**
 - [x] **Goal Selection (TTC vs TTA Modes)**
 - [x] Add helpful tooltips/explanations
+- [x] **Daily Testing Reminders (Local Notifications)**
 
 ### Data Management & Beta Features
 - [x] Add reset all data functionality

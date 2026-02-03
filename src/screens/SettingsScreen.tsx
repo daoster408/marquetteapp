@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Linking, Alert, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Linking, Alert, Platform, Modal } from 'react-native';
 import { Text, Card, Switch, Divider, List, Button, Portal, Dialog } from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCycleStore } from '../store';
 import { COLORS, STRINGS } from '../constants';
-import { importCyclesFromUserCSV } from '../utils/importData'; // New user-facing import function
-import { exportCyclesToCSV } from '../utils/exportData'; // Import the new export function
-import Constants from 'expo-constants'; // For app version and device info
+import { importCyclesFromUserCSV } from '../utils/importData'; 
+import { exportCyclesToCSV } from '../utils/exportData'; 
+import { registerForPushNotificationsAsync, scheduleDailyReminder, cancelAllNotifications } from '../utils/notifications';
+import Constants from 'expo-constants'; 
 
 interface Props {
   navigation: any;
@@ -16,10 +18,66 @@ export default function SettingsScreen({ navigation }: Props) {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showMockDataDialog, setShowMockDataDialog] = useState(false);
   const [showCSVImportDialog, setShowCSVImportDialog] = useState(false);
+  
+  // Notification Time Picker State
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [reminderDate, setReminderDate] = useState(() => {
+    // Initialize date object from stored string "HH:MM" or default 08:00
+    const d = new Date();
+    const [hours, minutes] = (settings.reminderTime || "08:00").split(':').map(Number);
+    d.setHours(hours);
+    d.setMinutes(minutes);
+    d.setSeconds(0);
+    return d;
+  });
 
   const appVersion = Constants.expoConfig?.version || 'Unknown';
   const deviceName = Constants.deviceName || 'Unknown';
   const platformOS = Platform.OS;
+
+  const handleNotificationToggle = async (value: boolean) => {
+    if (value) {
+      // User turning ON notifications
+      const hasPermission = await registerForPushNotificationsAsync();
+      if (hasPermission) {
+        updateSettings({ notificationsEnabled: true });
+        // Schedule immediately based on current time
+        const hour = reminderDate.getHours();
+        const minute = reminderDate.getMinutes();
+        await scheduleDailyReminder(hour, minute);
+      } else {
+        // Permission denied
+        updateSettings({ notificationsEnabled: false });
+        Alert.alert("Permission Required", "Please enable notifications in your device settings to use reminders.");
+      }
+    } else {
+      // User turning OFF notifications
+      updateSettings({ notificationsEnabled: false });
+      await cancelAllNotifications();
+    }
+  };
+
+  const handleTimeChange = async (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    
+    if (selectedDate) {
+      setReminderDate(selectedDate);
+      
+      // Save string "HH:MM" to store
+      const hours = String(selectedDate.getHours()).padStart(2, '0');
+      const minutes = String(selectedDate.getMinutes()).padStart(2, '0');
+      const timeString = `${hours}:${minutes}`;
+      
+      updateSettings({ reminderTime: timeString });
+
+      // Reschedule if enabled
+      if (settings.notificationsEnabled) {
+        await scheduleDailyReminder(selectedDate.getHours(), selectedDate.getMinutes());
+      }
+    }
+  };
 
   const handleResetAllData = () => {
     resetAllData();
@@ -196,10 +254,62 @@ Please describe the bug or feedback below:\n\n`;
             </View>
             <Switch
               value={settings.notificationsEnabled}
-              onValueChange={(value) => updateSettings({ notificationsEnabled: value })}
+              onValueChange={handleNotificationToggle}
               color={COLORS.primary}
             />
           </View>
+
+          {settings.notificationsEnabled && (
+            <>
+              <Divider style={styles.divider} />
+              <View style={styles.settingRow}>
+                <Text variant="bodyLarge">Reminder Time</Text>
+                <Button 
+                  mode="outlined" 
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  {reminderDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Button>
+              </View>
+
+              {/* Android Date Picker */}
+              {showTimePicker && Platform.OS === 'android' && (
+                <DateTimePicker
+                  value={reminderDate}
+                  mode="time"
+                  is24Hour={false}
+                  display="default"
+                  onChange={handleTimeChange}
+                />
+              )}
+
+              {/* iOS Date Picker Modal */}
+              {Platform.OS === 'ios' && (
+                <Modal
+                  visible={showTimePicker}
+                  transparent={true}
+                  animationType="slide"
+                  onRequestClose={() => setShowTimePicker(false)}
+                >
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                      <View style={styles.modalHeader}>
+                        <Button onPress={() => setShowTimePicker(false)}>Cancel</Button>
+                        <Button onPress={() => setShowTimePicker(false)} mode="text">Done</Button>
+                      </View>
+                      <DateTimePicker
+                        value={reminderDate}
+                        mode="time"
+                        display="spinner"
+                        onChange={handleTimeChange}
+                        textColor="black"
+                      />
+                    </View>
+                  </View>
+                </Modal>
+              )}
+            </>
+          )}
         </Card.Content>
       </Card>
 
