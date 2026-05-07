@@ -57,7 +57,6 @@ export const exportCyclesToCSV = async () => {
     });
 
     // --- SAVE AND SHARE ---
-    const csvContent = headers.join(',') + '\n' + rows.join('\n');
     const filename = `Fidelis_Chart_${getLocalDateISO()}.csv`;
     const fileUri = FileSystem.cacheDirectory + filename;
 

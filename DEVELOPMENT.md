@@ -5,7 +5,8 @@
 ```
 /app
   /src
-    /components       # Reusable UI components (currently empty)
+    /components       # Reusable UI components
+      - AddPastCycleModal.tsx
     /screens          # Main app screens
       - DashboardScreen.tsx
       - LogScreen.tsx
@@ -20,8 +21,9 @@
       - index.ts
     /constants        # Colors, strings
       - index.ts
-    /__tests__        # Unit tests (45 tests)
+    /__tests__        # Unit tests (51 tests)
       - marquetteAlgorithm.test.ts
+      - backupData.test.ts
   App.tsx             # Navigation setup
   index.ts            # Entry point
   eas.json            # EAS Build configuration
@@ -105,6 +107,15 @@ If no Peak by CD25:
   - `getCycleDay()`: Manually parses strings (`split('-')`) to create Date objects at Local 00:00:00.
   - `formatDate()`: Manually parses strings to ensure consistent display regardless of the user's timezone.
 - **Rule**: Never use `new Date(isoString)` for display logic regarding cycle days.
+- Shared helpers live in `src/utils/marquetteAlgorithm.ts`:
+  - `parseISODateLocal()`
+  - `addDaysToISO()`
+  - `getLocalDateISO()`
+
+### Data Export / Backup
+- **Doctor Chart CSV**: Wide-format chart intended for sharing with an instructor or doctor.
+- **Backup JSON**: Exact app-data backup intended for restore. This is the reliable path for protecting user data.
+- These are intentionally separate features so a human-readable chart does not have to double as a restore format.
 
 ---
 
@@ -122,13 +133,13 @@ If no Peak by CD25:
 - Implemented in `app/src/utils/mockData.ts` and triggered by `loadMockCycles` in the Zustand store.
 
 ### Import from CSV
-- **Status**: Active (Hardcoded for Testing)
-- **Goal**: Allows loading historical data from a local file to populate the app's history.
+- **Status**: Developer Tool
+- **Goal**: Allows loading historical data from a specifically formatted CSV file to populate the app's history.
 - **Implementation**:
-  - A parser exists at `app/src/utils/importData.ts` that is built to handle **Tab-Separated Values (TSV)**.
+  - A parser exists at `app/src/utils/importData.ts` for the developer CSV path.
   - The store action `importCyclesFromCSV` is implemented.
   - A button exists in the Developer Tools menu to trigger the import.
-  - **Note**: The user's specific historical data (approx 1 year) has been hardcoded into `app/src/utils/devTools.ts` to facilitate testing via standalone APK builds without needing a file picker UI implementation yet.
+  - **Note**: This is not the main backup/restore path. Use Backup JSON for preserving real app data.
 
 ---
 

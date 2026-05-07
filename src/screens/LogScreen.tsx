@@ -14,7 +14,7 @@ import {
 } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCycleStore } from '../store';
-import { getTodayISO, getCycleDay } from '../utils/marquetteAlgorithm';
+import { getTodayISO, getCycleDay, parseISODateLocal } from '../utils/marquetteAlgorithm';
 import { COLORS, STRINGS } from '../constants';
 import { MonitorReading, BleedingLevel } from '../types';
 
@@ -123,7 +123,7 @@ export default function LogScreen({ navigation }: Props) {
     return isToday ? `${formatted} (Today)` : formatted;
   };
 
-  const minDate = currentCycle ? new Date(currentCycle.startDate) : undefined;
+  const minDate = currentCycle ? parseISODateLocal(currentCycle.startDate) : undefined;
 
   const readingOptions = [
     { value: 'low', label: STRINGS.readingLow },

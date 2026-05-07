@@ -8,6 +8,8 @@ import {
   needsMonitorReset,
   calculateCycleStats,
   getCycleDay,
+  addDaysToISO,
+  parseISODateLocal,
   getTodayISO,
   generateId,
 } from '../utils/marquetteAlgorithm';
@@ -445,6 +447,21 @@ describe('Marquette Algorithm', () => {
       expect(getCycleDay(cycle, '2026-03-08')).toBe(5);
       expect(getCycleDay(cycle, '2026-03-09')).toBe(6);
       expect(getCycleDay(cycle, '2026-03-10')).toBe(7);
+    });
+  });
+
+  describe('calendar date helpers', () => {
+    it('should parse ISO dates as local calendar dates', () => {
+      const date = parseISODateLocal('2026-03-08');
+      expect(date.getFullYear()).toBe(2026);
+      expect(date.getMonth()).toBe(2);
+      expect(date.getDate()).toBe(8);
+    });
+
+    it('should add calendar days across DST without shifting dates', () => {
+      expect(addDaysToISO('2026-03-07', 1)).toBe('2026-03-08');
+      expect(addDaysToISO('2026-03-08', 1)).toBe('2026-03-09');
+      expect(addDaysToISO('2026-03-09', -1)).toBe('2026-03-08');
     });
   });
 

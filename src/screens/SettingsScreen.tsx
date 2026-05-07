@@ -6,6 +6,7 @@ import { useCycleStore } from '../store';
 import { COLORS, STRINGS } from '../constants';
 import { importCyclesFromUserCSV } from '../utils/importData'; 
 import { exportCyclesToCSV } from '../utils/exportData'; 
+import { exportBackupData, importBackupFromUserFile } from '../utils/backupData';
 import { registerForPushNotificationsAsync, scheduleDailyReminder, cancelAllNotifications } from '../utils/notifications';
 import Constants from 'expo-constants'; 
 
@@ -18,6 +19,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showMockDataDialog, setShowMockDataDialog] = useState(false);
   const [showCSVImportDialog, setShowCSVImportDialog] = useState(false);
+  const [showBackupImportDialog, setShowBackupImportDialog] = useState(false);
   
   // Notification Time Picker State
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -101,6 +103,15 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const handleExportData = async () => {
     await exportCyclesToCSV();
+  };
+
+  const handleExportBackup = async () => {
+    await exportBackupData();
+  };
+
+  const confirmImportBackup = async () => {
+    setShowBackupImportDialog(false);
+    await importBackupFromUserFile();
   };
 
   const handleReportBug = () => {
@@ -353,10 +364,10 @@ Please describe the bug or feedback below:\n\n`;
             style={styles.actionButton}
             icon="file-export-outline"
           >
-            Export All Data (CSV)
+            Export Doctor Chart (CSV)
           </Button>
           <Text variant="bodySmall" style={styles.actionDescription}>
-            Exports your complete cycle history to a CSV file. You can then share it via email or save to cloud storage.
+            Exports a readable cycle chart for sharing with an instructor or doctor.
           </Text>
 
           <Divider style={styles.divider} />
@@ -416,7 +427,31 @@ Please describe the bug or feedback below:\n\n`;
           </Text>
 
           <Text variant="bodySmall" style={styles.dataInfo}>
-            Future updates may include cloud backup options.
+            Backups are local files you can save to cloud storage or another device.
+          </Text>
+
+          <Divider style={styles.divider} />
+
+          <Button
+            mode="outlined"
+            onPress={handleExportBackup}
+            style={styles.actionButton}
+            icon="content-save-outline"
+          >
+            Export Backup (JSON)
+          </Button>
+
+          <Button
+            mode="outlined"
+            onPress={() => setShowBackupImportDialog(true)}
+            style={styles.actionButton}
+            icon="restore"
+          >
+            Import Backup (JSON)
+          </Button>
+
+          <Text variant="bodySmall" style={styles.resetWarning}>
+            Importing a backup replaces all current cycle history and settings.
           </Text>
 
           <Divider style={styles.divider} />
@@ -485,6 +520,24 @@ Please describe the bug or feedback below:\n\n`;
             <Button onPress={() => setShowCSVImportDialog(false)}>Cancel</Button>
             <Button onPress={confirmImportCSV} textColor={COLORS.primary}>
               Import CSV
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Backup Import Confirmation Dialog */}
+      <Portal>
+        <Dialog visible={showBackupImportDialog} onDismiss={() => setShowBackupImportDialog(false)}>
+          <Dialog.Title>Import Backup?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              This will replace all current cycle history, logs, and settings with the selected backup file. This action cannot be undone.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowBackupImportDialog(false)}>Cancel</Button>
+            <Button onPress={confirmImportBackup} textColor={COLORS.primary}>
+              Import Backup
             </Button>
           </Dialog.Actions>
         </Dialog>
@@ -583,5 +636,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });

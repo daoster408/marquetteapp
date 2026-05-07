@@ -55,17 +55,11 @@ export default function CalendarScreen({ navigation }: Props) {
 
     if (!currentCycle) return emptyResult;
 
-    const cycleStartDate = new Date(currentCycle.startDate);
-    const targetDate = new Date(dateString);
-
     // Check if date is within current cycle
-    if (targetDate < cycleStartDate) {
+    if (dateString < currentCycle.startDate) {
       // Check completed cycles
       for (const cycle of [...completedCycles].reverse()) {
-        const cycleStart = new Date(cycle.startDate);
-        const cycleEnd = cycle.endDate ? new Date(cycle.endDate) : null;
-
-        if (targetDate >= cycleStart && (!cycleEnd || targetDate < cycleEnd)) {
+        if (dateString >= cycle.startDate && (!cycle.endDate || dateString <= cycle.endDate)) {
           const log = cycle.days.find(d => d.date === dateString) || null;
           const cycleDay = getCycleDay(cycle, dateString);
           const peakDay = cycle.peakDay || null;

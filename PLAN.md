@@ -75,6 +75,8 @@ A Catholic-aligned fertility tracking app implementing the Marquette Method of N
 
 9.  **Doctor Export** - Wide-format CSV "Cycle Sheet" for instructors/doctors
 
+10. **Local Backup** - Exact JSON backup/restore for protecting real app data
+
 ### Data Model Requirements
 - Track Peak day for every cycle
 - Rolling 6-cycle lookback for earliest Peak calculation

@@ -1,11 +1,9 @@
 import { Cycle, DayLog, MonitorReading } from '../types';
-import { getLocalDateISO } from './marquetteAlgorithm';
+import { addDaysToISO } from './marquetteAlgorithm';
 
 // Helper to add days to a date
 const addDays = (date: string, days: number): string => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return getLocalDateISO(result);
+  return addDaysToISO(date, days);
 };
 
 // Generates a single, realistic-looking cycle

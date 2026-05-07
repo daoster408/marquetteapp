@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -64,7 +66,6 @@ export async function scheduleDailyReminder(hour: number, minute: number) {
     trigger: {
       hour,
       minute,
-      repeats: true,
       type: Notifications.SchedulableTriggerInputTypes.DAILY, 
     },
   });

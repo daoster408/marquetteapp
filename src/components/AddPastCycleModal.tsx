@@ -83,7 +83,7 @@ export default function AddPastCycleModal({ visible, onDismiss }: AddPastCycleMo
     };
 
     useCycleStore.setState(state => ({
-      cycles: [...state.cycles, newCycle].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
+      cycles: [...state.cycles, newCycle].sort((a, b) => a.startDate.localeCompare(b.startDate)),
     }));
 
     Alert.alert('Success', 'Past cycle added successfully!');

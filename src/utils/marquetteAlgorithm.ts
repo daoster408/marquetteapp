@@ -287,6 +287,24 @@ export function getLocalDateISO(date: Date = new Date()): string {
 }
 
 /**
+ * Parse YYYY-MM-DD as a local calendar date.
+ * Do not use new Date(isoDate) for cycle dates; JS treats that form as UTC.
+ */
+export function parseISODateLocal(isoDate: string): Date {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Add calendar days to a YYYY-MM-DD value and return YYYY-MM-DD.
+ */
+export function addDaysToISO(isoDate: string, days: number): string {
+  const date = parseISODateLocal(isoDate);
+  date.setDate(date.getDate() + days);
+  return getLocalDateISO(date);
+}
+
+/**
  * Get today's date as ISO string (YYYY-MM-DD)
  */
 export function getTodayISO(): string {

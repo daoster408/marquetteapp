@@ -5,7 +5,7 @@ import { Cycle, DayLog, MonitorReading, AppSettings, BleedingLevel } from '../ty
 import {
   generateId,
   getTodayISO,
-  getLocalDateISO,
+  addDaysToISO,
   getCycleDay,
   findPeakDay,
 } from '../utils/marquetteAlgorithm';
@@ -34,6 +34,7 @@ interface CycleState {
 
   // Reset
   resetAllData: () => void;
+  restoreBackupData: (backup: Pick<CycleState, 'cycles' | 'currentCycleId' | 'settings'>) => void;
 
   // --- Developer Actions ---
   loadMockCycles: () => void;
@@ -63,9 +64,7 @@ export const useCycleStore = create<CycleState>()(
           updatedCycles = updatedCycles.map(cycle => {
             if (cycle.id === state.currentCycleId) {
               // End date is day before new cycle starts
-              const startDateObj = new Date(today);
-              startDateObj.setDate(startDateObj.getDate() - 1);
-              const prevEndDate = getLocalDateISO(startDateObj);
+              const prevEndDate = addDaysToISO(today, -1);
               
               // Calculate length using the corrected end date
               const cycleLength = getCycleDay(cycle, prevEndDate);
@@ -302,6 +301,14 @@ export const useCycleStore = create<CycleState>()(
             notificationsEnabled: true,
             intention: 'TTA',
           },
+        });
+      },
+
+      restoreBackupData: (backup) => {
+        set({
+          cycles: backup.cycles,
+          currentCycleId: backup.currentCycleId,
+          settings: backup.settings,
         });
       },
 

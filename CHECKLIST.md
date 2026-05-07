@@ -17,7 +17,7 @@
 - [x] Implement fertile window closing (Peak + 1 + 3 days)
 - [x] Implement CD25 no-Peak detection and reset flow
 - [x] Implement rolling 6-cycle lookback calculation
-- [x] Write unit tests for algorithm (45 tests passing)
+- [x] Write unit tests for algorithm and backup parsing (51 tests passing)
 
 ### Data Layer
 - [x] Set up Zustand store
@@ -49,6 +49,7 @@
 - [x] Add reset all data functionality
 - [x] Confirmation dialog for destructive actions
 - [x] **Export Data to CSV (Wide Format for Doctors)**
+- [x] **Export/Import Exact Backup (JSON)**
 - [x] **Bug Report & Feedback System**
 - [x] **Import Historical Cycles (Manual Entry Wizard)**
 - [x] Import Raw CSV (Developer Tool only)
@@ -112,6 +113,6 @@
 
 ## Notes
 
-*   **Beta Status:** Ready for "Internal Testing" track on Play Store.
-*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo).
-*   **Next Priority:** Gather feedback from initial beta testers (Wife + Community).
+*   **Beta Status:** Stabilization branch in progress after local/GitHub checkpoint.
+*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path.
+*   **Next Priority:** Device-test backup export/import and the daily logging flow before merging stabilization work.

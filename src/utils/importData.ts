@@ -89,7 +89,7 @@ export const parseCSVData = (csvContent: string): { cycles: Cycle[]; currentCycl
 
   const cycles = Array.from(cyclesMap.values());
   // Sort cycles by date
-  cycles.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  cycles.sort((a, b) => a.startDate.localeCompare(b.startDate));
   
   // Determine current cycle (last one if not complete, or null)
   let currentCycleId = null;

@@ -61,7 +61,7 @@ export default function DashboardScreen({ navigation }: Props) {
   // Handle auto-peak recording
   React.useEffect(() => {
     if (needsAutoPeak && !todaysLog) {
-      logDay('peak', 'Auto-recorded 2nd Peak');
+      logDay('peak', undefined, 'Auto-recorded 2nd Peak');
     }
   }, [needsAutoPeak, todaysLog]);
 
