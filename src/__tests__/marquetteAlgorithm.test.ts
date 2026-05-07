@@ -435,6 +435,17 @@ describe('Marquette Algorithm', () => {
       expect(getCycleDay(cycle, '2024-01-14')).toBe(14);
       expect(getCycleDay(cycle, '2024-01-25')).toBe(25);
     });
+
+    it('should handle Daylight Saving Time (DST) spring forward correctly', () => {
+      // In US, March 8, 2026 is DST Spring Forward.
+      const cycle = createCycle('2026-03-04');
+      // March 4 (CD1), March 5 (CD2), March 6 (CD3), March 7 (CD4)
+      // March 8 (CD5 - DST day), March 9 (CD6), March 10 (CD7)
+      expect(getCycleDay(cycle, '2026-03-07')).toBe(4);
+      expect(getCycleDay(cycle, '2026-03-08')).toBe(5);
+      expect(getCycleDay(cycle, '2026-03-09')).toBe(6);
+      expect(getCycleDay(cycle, '2026-03-10')).toBe(7);
+    });
   });
 
   describe('getTodayISO', () => {

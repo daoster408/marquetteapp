@@ -4,7 +4,7 @@ import { Button, Dialog, Portal, Text, TextInput, useTheme } from 'react-native-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCycleStore } from '../store';
 import { COLORS } from '../constants';
-import { generateId, getCycleDay } from '../utils/marquetteAlgorithm';
+import { generateId, getCycleDay, getLocalDateISO } from '../utils/marquetteAlgorithm';
 
 interface AddPastCycleModalProps {
   visible: boolean;
@@ -61,15 +61,15 @@ export default function AddPastCycleModal({ visible, onDismiss }: AddPastCycleMo
     }
 
     const newCycleId = generateId();
-    const newCycleStartDateISO = startDate.toISOString().split('T')[0];
-    const newCycleEndDateISO = endDate.toISOString().split('T')[0];
+    const newCycleStartDateISO = getLocalDateISO(startDate);
+    const newCycleEndDateISO = getLocalDateISO(endDate);
 
     // Simulate adding a new complete cycle
     // This is a simplified version for history, mainly capturing key dates.
     // We don't need to call startNewCycle from useCycleStore as that manages the current cycle.
     // Instead, we directly create and add a 'completed' cycle to the cycles array.
     const cycleLength = getCycleDay({ id: newCycleId, startDate: newCycleStartDateISO, days: [], isComplete: true }, newCycleEndDateISO);
-    const peakCycleDay = peakDate ? getCycleDay({ id: newCycleId, startDate: newCycleStartDateISO, days: [], isComplete: true }, peakDate.toISOString().split('T')[0]) : undefined;
+    const peakCycleDay = peakDate ? getCycleDay({ id: newCycleId, startDate: newCycleStartDateISO, days: [], isComplete: true }, getLocalDateISO(peakDate)) : undefined;
 
     const newCycle = {
       id: newCycleId,

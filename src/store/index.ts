@@ -5,6 +5,7 @@ import { Cycle, DayLog, MonitorReading, AppSettings, BleedingLevel } from '../ty
 import {
   generateId,
   getTodayISO,
+  getLocalDateISO,
   getCycleDay,
   findPeakDay,
 } from '../utils/marquetteAlgorithm';
@@ -64,7 +65,7 @@ export const useCycleStore = create<CycleState>()(
               // End date is day before new cycle starts
               const startDateObj = new Date(today);
               startDateObj.setDate(startDateObj.getDate() - 1);
-              const prevEndDate = startDateObj.toISOString().split('T')[0];
+              const prevEndDate = getLocalDateISO(startDateObj);
               
               // Calculate length using the corrected end date
               const cycleLength = getCycleDay(cycle, prevEndDate);

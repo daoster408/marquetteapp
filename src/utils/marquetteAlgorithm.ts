@@ -261,29 +261,36 @@ export function calculateCycleStats(cycles: Cycle[]): CycleStats {
  * Get the cycle day for a given date within a cycle
  */
 export function getCycleDay(cycle: Cycle, date: string): number {
-  // Parse manually to ensure we are comparing local calendar dates
-  // avoiding any UTC parsing shifts
+  // Parse manually and use UTC to avoid any Daylight Saving Time (DST) 
+  // duration shifts when calculating the difference between two calendar dates.
   const [sYear, sMonth, sDay] = cycle.startDate.split('-').map(Number);
-  const startDate = new Date(sYear, sMonth - 1, sDay);
+  const startUTC = Date.UTC(sYear, sMonth - 1, sDay);
 
   const [tYear, tMonth, tDay] = date.split('-').map(Number);
-  const targetDate = new Date(tYear, tMonth - 1, tDay);
+  const targetUTC = Date.UTC(tYear, tMonth - 1, tDay);
 
-  const diffTime = targetDate.getTime() - startDate.getTime();
+  const diffTime = targetUTC - startUTC;
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
   return diffDays + 1; // CD1 is day 0 difference
 }
 
 /**
+ * Get a date as ISO string (YYYY-MM-DD) correctly in local time
+ * avoiding any UTC parsing/shifter issues.
+ */
+export function getLocalDateISO(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Get today's date as ISO string (YYYY-MM-DD)
  */
 export function getTodayISO(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return getLocalDateISO(new Date());
 }
 
 /**

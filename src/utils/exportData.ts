@@ -2,6 +2,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy'; // Use legacy for compatibility with SDK 54
 import { Alert } from 'react-native';
 import { useCycleStore } from '../store';
+import { getLocalDateISO } from './marquetteAlgorithm';
 
 export const exportCyclesToCSV = async () => {
   try {
@@ -56,8 +57,9 @@ export const exportCyclesToCSV = async () => {
     });
 
     // --- SAVE AND SHARE ---
-    const filename = `Fidelis_Chart_${new Date().toISOString().split('T')[0]}.csv`;
-    const fileUri = FileSystem.cacheDirectory + filename; // Use cache for better sharing
+    const csvContent = headers.join(',') + '\n' + rows.join('\n');
+    const filename = `Fidelis_Chart_${getLocalDateISO()}.csv`;
+    const fileUri = FileSystem.cacheDirectory + filename;
 
     await FileSystem.writeAsStringAsync(fileUri, csvContent, {
       encoding: FileSystem.EncodingType.UTF8
