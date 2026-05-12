@@ -52,6 +52,7 @@
 - [x] **Export/Import Exact Backup (JSON)**
 - [x] **Bug Report & Feedback System**
 - [x] **Import Historical Cycles (Manual Entry Wizard)**
+- [x] **Delete Completed Cycles from History**
 - [x] Import Raw CSV (Developer Tool only)
 - [x] **EAS Update (OTA) Support Configured**
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import { Alert, View, StyleSheet, FlatList } from 'react-native';
 import { Text, Card, Chip, Divider, Button } from 'react-native-paper';
 import { useCycleStore } from '../store';
 import { calculateCycleStats } from '../utils/marquetteAlgorithm';
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function HistoryScreen({ navigation }: Props) {
-  const { cycles, getCurrentCycle } = useCycleStore();
+  const { cycles, getCurrentCycle, deleteCompletedCycle } = useCycleStore();
   const currentCycle = getCurrentCycle();
 
   const completedCycles = cycles.filter(c => c.isComplete);
@@ -36,7 +36,23 @@ export default function HistoryScreen({ navigation }: Props) {
 
   const renderCycleItem = ({ item, index }: { item: Cycle; index: number }) => {
     const cycleNumber = completedCycles.length - index;
-    const peakReading = item.days.find(d => d.reading === 'peak' && !d.isAutoPeak);
+
+    const confirmDeleteCycle = () => {
+      const dateRange = `${formatDate(item.startDate)} - ${item.endDate ? formatDate(item.endDate) : 'Ongoing'}`;
+
+      Alert.alert(
+        'Delete Cycle?',
+        `This will permanently delete Cycle ${cycleNumber} (${dateRange}) and ${item.days.length} log(s). Export a backup first if you may need this later.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => deleteCompletedCycle(item.id),
+          },
+        ]
+      );
+    };
 
     return (
       <Card style={styles.cycleCard}>
@@ -84,6 +100,16 @@ export default function HistoryScreen({ navigation }: Props) {
             </View>
           </View>
         </Card.Content>
+        <Card.Actions>
+          <Button
+            mode="text"
+            icon="trash-can-outline"
+            textColor={COLORS.warning}
+            onPress={confirmDeleteCycle}
+          >
+            Delete Cycle
+          </Button>
+        </Card.Actions>
       </Card>
     );
   };

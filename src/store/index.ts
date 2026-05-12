@@ -25,6 +25,7 @@ interface CycleState {
   updateSettings: (settings: Partial<AppSettings>) => void;
   markMonitorReset: () => void;
   toggleIntercourse: (date: string) => void;
+  deleteCompletedCycle: (cycleId: string) => void;
 
   // Getters (computed from state)
   getCurrentCycle: () => Cycle | null;
@@ -262,6 +263,20 @@ export const useCycleStore = create<CycleState>()(
         });
 
         set({ cycles: updatedCycles });
+      },
+
+      deleteCompletedCycle: (cycleId: string) => {
+        set(state => {
+          const cycleToDelete = state.cycles.find(cycle => cycle.id === cycleId);
+
+          if (!cycleToDelete || !cycleToDelete.isComplete || cycleId === state.currentCycleId) {
+            return {};
+          }
+
+          return {
+            cycles: state.cycles.filter(cycle => cycle.id !== cycleId),
+          };
+        });
       },
 
       // Get current cycle
