@@ -3,6 +3,7 @@ import { Alert, View, StyleSheet, FlatList, ScrollView } from 'react-native';
 import { Text, Card, Chip, Divider, Button, SegmentedButtons } from 'react-native-paper';
 import { useCycleStore } from '../store';
 import { calculateCycleStats, getCycleDay, getTodayISO } from '../utils/marquetteAlgorithm';
+import { exportMarquetteChartPdf } from '../utils/exportChartPdf';
 import { COLORS } from '../constants';
 import { Cycle, DayLog } from '../types';
 import AddPastCycleModal from '../components/AddPastCycleModal'; // Import the new modal component
@@ -367,6 +368,15 @@ export default function HistoryScreen({ navigation }: Props) {
               <Text variant="titleMedium" style={styles.chartTitle}>Cycle Chart</Text>
               <Chip compact style={styles.chartChip}>Last {chartCycles.length || 0}</Chip>
             </View>
+
+            <Button
+              mode="contained"
+              icon="file-pdf-box"
+              onPress={() => exportMarquetteChartPdf(cycles)}
+              style={styles.pdfExportButton}
+            >
+              Export PDF
+            </Button>
 
             <ScrollView horizontal showsHorizontalScrollIndicator>
               <View>
@@ -833,6 +843,10 @@ const styles = StyleSheet.create({
   },
   chartChip: {
     backgroundColor: COLORS.background,
+  },
+  pdfExportButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 12,
   },
   chartRow: {
     flexDirection: 'row',

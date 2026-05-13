@@ -50,6 +50,7 @@
 - [x] Add reset all data functionality
 - [x] Confirmation dialog for destructive actions
 - [x] **Export Data to CSV (Wide Format for Doctors)**
+- [x] **Export Marquette-style Chart to PDF**
 - [x] **Export/Import Exact Backup (JSON)**
 - [x] **Bug Report & Feedback System**
 - [x] **Import Historical Cycles (Manual Entry Wizard)**

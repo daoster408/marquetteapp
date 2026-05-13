@@ -77,7 +77,7 @@ A Catholic-aligned fertility tracking app implementing the Marquette Method of N
 
 8.  **Settings** - Conservative mode toggle, Goal selection
 
-9.  **Doctor Export** - Wide-format CSV "Cycle Sheet" for instructors/doctors
+9.  **Doctor Export** - Wide-format CSV "Cycle Sheet" and PDF chart for instructors/doctors
 
 10. **Local Backup** - Exact JSON backup/restore for protecting real app data
 
