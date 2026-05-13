@@ -9,6 +9,7 @@ import {
   getCycleDay,
   findPeakDay,
 } from '../utils/marquetteAlgorithm';
+import { getCyclePeakDay, normalizeCycleData, sortCycleDays } from '../utils/cycleData';
 import { generateMockCycles } from '../utils/mockData';
 import { parseCSVData } from '../utils/importData';
 
@@ -23,7 +24,7 @@ interface CycleState {
   logDay: (reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => void;
   logDayForDate: (date: string, reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
-  markMonitorReset: () => void;
+  markMonitorReset: (date?: string) => void;
   toggleIntercourse: (date: string) => void;
   deleteCompletedCycle: (cycleId: string) => void;
 
@@ -58,6 +59,13 @@ export const useCycleStore = create<CycleState>()(
       startNewCycle: (startDate?: string) => {
         const today = startDate || getTodayISO();
         const state = get();
+        const currentCycle = state.currentCycleId
+          ? state.cycles.find(c => c.id === state.currentCycleId)
+          : null;
+
+        if (today > getTodayISO() || (currentCycle && today <= currentCycle.startDate)) {
+          return;
+        }
 
         // Close the current cycle if one exists
         let updatedCycles = [...state.cycles];
@@ -70,12 +78,16 @@ export const useCycleStore = create<CycleState>()(
               // Calculate length using the corrected end date
               const cycleLength = getCycleDay(cycle, prevEndDate);
               
+              const days = sortCycleDays(cycle.days);
+              const peakDay = getCyclePeakDay({ ...cycle, days });
               let lutealPhaseLength: number | undefined;
-              if (cycle.peakDay && cycleLength > cycle.peakDay) {
-                lutealPhaseLength = cycleLength - cycle.peakDay;
+              if (peakDay && cycleLength > peakDay) {
+                lutealPhaseLength = cycleLength - peakDay;
               }
               return {
                 ...cycle,
+                days,
+                peakDay,
                 endDate: prevEndDate,
                 cycleLength,
                 lutealPhaseLength,
@@ -149,16 +161,10 @@ export const useCycleStore = create<CycleState>()(
             intercourse: updatedDays[existingIndex].intercourse
           };
         } else {
-          updatedDays = [...currentCycle.days, newLog].sort(
-            (a, b) => a.cycleDay - b.cycleDay
-          );
+          updatedDays = sortCycleDays([...currentCycle.days, newLog]);
         }
 
-        // Update Peak day if this is a Peak reading
-        let peakDay = currentCycle.peakDay;
-        if (reading === 'peak' && !isAutoPeak) {
-          peakDay = cycleDay;
-        }
+        const peakDay = findPeakDay(updatedDays) ?? undefined;
 
         const updatedCycles = state.cycles.map(cycle => {
           if (cycle.id === state.currentCycleId) {
@@ -181,40 +187,43 @@ export const useCycleStore = create<CycleState>()(
         }));
       },
 
-      // Mark that monitor was reset today
-      markMonitorReset: () => {
+      // Mark that monitor was reset on the selected date
+      markMonitorReset: (date?: string) => {
         const state = get();
         if (!state.currentCycleId) return;
 
-        const today = getTodayISO();
+        const resetDate = date || getTodayISO();
         const currentCycle = state.cycles.find(c => c.id === state.currentCycleId);
         if (!currentCycle) return;
 
-        const cycleDay = getCycleDay(currentCycle, today);
+        const cycleDay = getCycleDay(currentCycle, resetDate);
 
         const resetLog: DayLog = {
-          date: today,
+          date: resetDate,
           cycleDay,
           reading: 'none',
           isMonitorReset: true,
           notes: 'Monitor reset - set to CD4',
         };
 
-        const existingIndex = currentCycle.days.findIndex(d => d.date === today);
+        const existingIndex = currentCycle.days.findIndex(d => d.date === resetDate);
         let updatedDays: DayLog[];
 
         if (existingIndex >= 0) {
           updatedDays = [...currentCycle.days];
-          updatedDays[existingIndex] = resetLog;
+          updatedDays[existingIndex] = {
+            ...updatedDays[existingIndex],
+            ...resetLog,
+            intercourse: updatedDays[existingIndex].intercourse,
+          };
         } else {
-          updatedDays = [...currentCycle.days, resetLog].sort(
-            (a, b) => a.cycleDay - b.cycleDay
-          );
+          updatedDays = sortCycleDays([...currentCycle.days, resetLog]);
         }
 
+        const peakDay = findPeakDay(updatedDays) ?? undefined;
         const updatedCycles = state.cycles.map(cycle => {
           if (cycle.id === state.currentCycleId) {
-            return { ...cycle, days: updatedDays };
+            return { ...cycle, days: updatedDays, peakDay };
           }
           return cycle;
         });
@@ -250,9 +259,7 @@ export const useCycleStore = create<CycleState>()(
             reading: 'none',
             intercourse: true,
           };
-          updatedDays = [...currentCycle.days, newLog].sort(
-            (a, b) => a.cycleDay - b.cycleDay
-          );
+          updatedDays = sortCycleDays([...currentCycle.days, newLog]);
         }
 
         const updatedCycles = state.cycles.map(cycle => {
@@ -321,7 +328,7 @@ export const useCycleStore = create<CycleState>()(
 
       restoreBackupData: (backup) => {
         set({
-          cycles: backup.cycles,
+          cycles: backup.cycles.map(normalizeCycleData),
           currentCycleId: backup.currentCycleId,
           settings: backup.settings,
         });

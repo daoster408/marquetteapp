@@ -68,4 +68,35 @@ describe('backup data', () => {
       'This does not look like a Fidelis backup file.'
     );
   });
+
+  it('normalizes stale derived cycle fields from backup content', () => {
+    const backupWithStalePeak = {
+      ...validBackup,
+      cycles: [
+        {
+          id: 'cycle-1',
+          startDate: '2026-04-01',
+          endDate: '2026-04-28',
+          cycleLength: 99,
+          peakDay: 14,
+          lutealPhaseLength: 85,
+          isComplete: true,
+          days: [
+            {
+              date: '2026-04-14',
+              cycleDay: 14,
+              reading: 'low',
+            },
+          ],
+        },
+      ],
+      currentCycleId: null,
+    };
+
+    const parsed = parseBackupContent(JSON.stringify(backupWithStalePeak));
+
+    expect(parsed.cycles[0].peakDay).toBeUndefined();
+    expect(parsed.cycles[0].cycleLength).toBe(28);
+    expect(parsed.cycles[0].lutealPhaseLength).toBeUndefined();
+  });
 });

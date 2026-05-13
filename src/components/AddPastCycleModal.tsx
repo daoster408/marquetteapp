@@ -50,8 +50,8 @@ export default function AddPastCycleModal({ visible, onDismiss }: AddPastCycleMo
       return;
     }
 
-    if (startDate > endDate) {
-      Alert.alert('Invalid Dates', 'Start Date cannot be after End Date.');
+    if (startDate >= endDate) {
+      Alert.alert('Invalid Dates', 'End Date must be after Start Date.');
       return;
     }
 

@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useCycleStore } from '../store';
 import { AppSettings, Cycle, MonitorReading } from '../types';
+import { normalizeCycleData } from './cycleData';
 import { getLocalDateISO } from './marquetteAlgorithm';
 
 const BACKUP_FORMAT = 'fidelis.app.backup';
@@ -102,7 +103,7 @@ export function parseBackupContent(content: string): Pick<AppBackup, 'cycles' | 
 
   parsed.cycles.forEach(assertValidCycle);
 
-  const cycles = parsed.cycles;
+  const cycles = parsed.cycles.map(normalizeCycleData);
   const currentCycleId = typeof parsed.currentCycleId === 'string' ? parsed.currentCycleId : null;
 
   if (currentCycleId && !cycles.some(cycle => cycle.id === currentCycleId)) {

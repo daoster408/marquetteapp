@@ -108,7 +108,7 @@ export default function LogScreen({ navigation }: Props) {
   };
 
   const handleMonitorReset = () => {
-    markMonitorReset();
+    markMonitorReset(selectedDateISO);
     setSnackbarMessage('Monitor reset recorded.');
     setShowSnackbar(true);
   };
