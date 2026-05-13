@@ -71,6 +71,8 @@ A Catholic-aligned fertility tracking app implementing the Marquette Method of N
 
 6a. **Cycle Corrections** - Delete completed cycles from history after confirmation
 
+6b. **Trends & Charting** - Visual trends, current-cycle comparison, and Marquette-style chart grid
+
 7.  **Alerts** - CD25 no-Peak warning, reset guidance
 
 8.  **Settings** - Conservative mode toggle, Goal selection

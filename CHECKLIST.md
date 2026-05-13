@@ -34,6 +34,7 @@
 - [x] Build Calendar View screen (color-coded monthly view)
 - [x] Add P, P2, 1, 2, 3 labels on calendar
 - [x] Build Cycle History screen (past cycles list)
+- [x] Add Trends and Marquette-style Chart views to History
 - [x] Build Settings screen (conservative mode toggle)
 - [x] Build New Cycle flow (start cycle, save previous)
 
@@ -78,8 +79,8 @@
 - [x] Average cycle length calculation (in History screen)
 - [x] Average Peak day calculation (in History screen)
 - [x] Luteal phase length calculation
-- [ ] Cycle length trend chart
-- [ ] Historical data visualization
+- [x] Cycle length trend chart
+- [x] Historical data visualization
 - [ ] **Implement smart reset warning (based on first actual test day)**
 - [ ] Analytics screen UI
 
