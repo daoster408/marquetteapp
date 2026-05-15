@@ -17,13 +17,15 @@
 - [x] Implement fertile window closing (Peak + 1 + 3 days)
 - [x] Implement CD25 no-Peak detection and reset flow
 - [x] Implement rolling 6-cycle lookback calculation
-- [x] Write unit tests for algorithm and backup parsing (51 tests passing)
+- [x] Write unit tests for algorithm, backup parsing, and cycle-store integrity (56 tests passing)
 
 ### Data Layer
 - [x] Set up Zustand store
 - [x] Implement cycle storage with AsyncStorage
 - [x] Implement cycle history persistence
 - [x] Implement Peak day tracking per cycle
+- [x] Recalculate derived cycle fields from actual logs to prevent stale Peak data
+- [x] Normalize imported backup data before restoring it
 
 ### Screens & UI
 - [x] Create app navigation structure
@@ -55,6 +57,7 @@
 - [x] **Bug Report & Feedback System**
 - [x] **Import Historical Cycles (Manual Entry Wizard)**
 - [x] **Delete Completed Cycles from History**
+- [x] Block invalid same-day past cycles
 - [x] Import Raw CSV (Developer Tool only)
 - [x] **EAS Update (OTA) Support Configured**
 
@@ -71,6 +74,8 @@
 - [x] Test 6-cycle lookback after first 6 cycles
 - [x] **Fix Date/Timezone bugs (LogScreen & CalendarScreen)**
 - [x] **Fix Intercourse Logging persistence bug**
+- [x] **Fix monitor reset recording on wrong selected date**
+- [x] **Fix stale Peak data after editing a Peak log**
 - [x] UI/UX polish pass (Icons, Calendar visibility, Date Picker)
 
 ---
@@ -116,6 +121,6 @@
 
 ## Notes
 
-*   **Beta Status:** Stabilization branch in progress after local/GitHub checkpoint.
+*   **Beta Status:** Stabilization, backup, history, PDF export, and cycle data integrity fixes are merged to `main` and published to the `preview` OTA channel.
 *   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path.
-*   **Next Priority:** Device-test backup export/import and the daily logging flow before merging stabilization work.
+*   **Next Priority:** Device-test the latest `preview` OTA: backup export/import, daily logging edits, monitor reset on a selected date, delete completed cycle, History trends/chart, and PDF chart export.
