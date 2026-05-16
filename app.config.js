@@ -18,6 +18,10 @@ module.exports = ({ config }) => ({
     ...config.android,
     package: isDogfood ? 'com.daoster.app.dogfood' : config.android?.package,
   },
+  plugins: [
+    ...(config.plugins || []),
+    'expo-web-browser',
+  ],
   extra: {
     ...config.extra,
     appVariant: isDogfood ? 'dogfood' : 'stable',
