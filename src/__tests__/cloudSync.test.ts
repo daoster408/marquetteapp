@@ -1,6 +1,7 @@
 import { createMigrationSnapshot, canUploadMigration, toSharedSettings } from '../services/cloudSync/migration';
 import { formatInviteCode, hashInviteSecret, parseInviteCode } from '../services/cloudSync/inviteCodes';
 import { getActiveMember, isOwner } from '../services/cloudSync/repository';
+import { dayLogToFirestore } from '../services/cloudSync/serialization';
 import { AppSettings, CoupleMember, Cycle } from '../types';
 
 const settings: AppSettings = {
@@ -85,5 +86,25 @@ describe('cloud sync invite codes', () => {
     await expect(hashInviteSecret('couple-1', 'SECRET')).resolves.toBe(
       await hashInviteSecret('couple-1', 'secret')
     );
+  });
+});
+
+describe('cloud sync firestore serialization', () => {
+  it('does not leave undefined values in day logs before upload', () => {
+    const day = {
+      date: '2026-05-16',
+      cycleDay: 1,
+      reading: 'none' as const,
+      bleeding: undefined,
+      notes: undefined,
+      isAutoPeak: false,
+    };
+
+    expect(dayLogToFirestore(day)).toEqual({
+      date: '2026-05-16',
+      cycleDay: 1,
+      reading: 'none',
+      isAutoPeak: false,
+    });
   });
 });

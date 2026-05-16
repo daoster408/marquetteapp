@@ -28,6 +28,7 @@ import { createInviteCode as createRawInviteCode, hashInviteSecret, parseInviteC
 import { getFirebaseServices, isFirebaseConfigured, isGoogleConfigured } from './firebase';
 import { AuthCredentials, CloudRepository } from './repository';
 import { toSharedSettings } from './migration';
+import { dayLogToFirestore } from './serialization';
 
 function timestampToIso(value: unknown): string | undefined {
   if (value instanceof Timestamp) {
@@ -90,7 +91,7 @@ function cycleToFirestore(cycle: Cycle, uid: string) {
     id: cycle.id,
     startDate: cycle.startDate,
     endDate: cycle.endDate || null,
-    days: cycle.days,
+    days: cycle.days.map(dayLogToFirestore),
     peakDay: cycle.peakDay || null,
     cycleLength: cycle.cycleLength || null,
     lutealPhaseLength: cycle.lutealPhaseLength || null,
