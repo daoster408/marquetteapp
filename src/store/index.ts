@@ -201,7 +201,19 @@ export const useCycleStore = create<CycleState>()(
         migrationCompletedCoupleIds: [],
 
         initializeCloudSync: () => {
-          const repository = getCloudRepository();
+          let repository: CloudRepository;
+          try {
+            repository = getCloudRepository();
+          } catch (error) {
+            set({
+              cloudConfigured: false,
+              googleSignInConfigured: false,
+              cloudMode: 'local',
+              cloudError: getErrorMessage(error),
+            });
+            return;
+          }
+
           const cloudConfigured = repository.isConfigured();
           const googleSignInConfigured = repository.isGoogleSignInConfigured();
           const migrationSnapshot = createMigrationSnapshot(
@@ -219,32 +231,39 @@ export const useCycleStore = create<CycleState>()(
 
           if (!cloudConfigured || authUnsubscribe) return;
 
-          authUnsubscribe = repository.subscribeToAuth(user => {
-            workspaceUnsubscribe?.();
-            workspaceUnsubscribe = null;
+          try {
+            authUnsubscribe = repository.subscribeToAuth(user => {
+              workspaceUnsubscribe?.();
+              workspaceUnsubscribe = null;
 
-            if (!user) {
+              if (!user) {
+                set({
+                  cloudUser: null,
+                  activeCoupleId: null,
+                  members: [],
+                  cloudMode: 'signed-out',
+                  latestInviteCode: null,
+                });
+                return;
+              }
+
               set({
-                cloudUser: null,
-                activeCoupleId: null,
-                members: [],
-                cloudMode: 'signed-out',
-                latestInviteCode: null,
+                cloudUser: user,
+                activeCoupleId: user.activeCoupleId || null,
+                cloudMode: user.activeCoupleId ? 'syncing' : 'workspace-required',
+                cloudError: null,
               });
-              return;
-            }
 
-            set({
-              cloudUser: user,
-              activeCoupleId: user.activeCoupleId || null,
-              cloudMode: user.activeCoupleId ? 'syncing' : 'workspace-required',
-              cloudError: null,
+              if (user.activeCoupleId) {
+                subscribeToWorkspace(user.activeCoupleId);
+              }
             });
-
-            if (user.activeCoupleId) {
-              subscribeToWorkspace(user.activeCoupleId);
-            }
-          });
+          } catch (error) {
+            set({
+              cloudMode: 'local',
+              cloudError: getErrorMessage(error),
+            });
+          }
         },
 
         signInWithEmail: async (email, password) => {
