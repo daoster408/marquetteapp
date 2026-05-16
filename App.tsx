@@ -8,14 +8,19 @@ import { PaperProvider, MD3LightTheme, Text } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
+import AppErrorBoundary from './src/components/AppErrorBoundary';
 import {
+  AuthScreen,
   DashboardScreen,
   LogScreen,
   CalendarScreen,
   HistoryScreen,
+  MigrationScreen,
   SettingsScreen,
+  WorkspaceScreen,
 } from './src/screens';
 import { COLORS, STRINGS } from './src/constants';
+import { useCycleStore } from './src/store';
 
 // Custom theme
 const theme = {
@@ -132,15 +137,22 @@ function TabNavigator() {
 // Main App
 export default function App() {
   const [isReady, setIsReady] = useState(false);
+  const {
+    activeCoupleId,
+    cloudMode,
+    initializeCloudSync,
+    pendingLocalMigration,
+  } = useCycleStore();
 
   useEffect(() => {
     // Give the store time to hydrate from AsyncStorage
     const timer = setTimeout(() => {
+      initializeCloudSync();
       setIsReady(true);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [initializeCloudSync]);
 
   if (!isReady) {
     return (
@@ -153,37 +165,50 @@ export default function App() {
     );
   }
 
+  const shouldShowMigration = cloudMode === 'ready' &&
+    activeCoupleId &&
+    pendingLocalMigration &&
+    pendingLocalMigration.cycles.length > 0;
+
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
-        <NavigationContainer>
-          <Stack.Navigator
-            screenOptions={{
-              headerStyle: {
-                backgroundColor: COLORS.primary,
-              },
-              headerTintColor: '#FFF',
-              headerTitleStyle: {
-                fontWeight: 'bold',
-              },
-            }}
-          >
-            <Stack.Screen
-              name="Main"
-              component={TabNavigator}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Log"
-              component={LogScreen}
-              options={{
-                title: 'Log Reading',
-                presentation: 'modal',
-              }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-        <StatusBar style="light" />
+        <AppErrorBoundary>
+          {cloudMode === 'signed-out' && <AuthScreen />}
+          {cloudMode === 'workspace-required' && <WorkspaceScreen />}
+          {cloudMode === 'syncing' && <LoadingScreen />}
+          {shouldShowMigration && <MigrationScreen />}
+          {(cloudMode === 'local' || (cloudMode === 'ready' && !shouldShowMigration) || cloudMode === 'error') && (
+            <NavigationContainer>
+              <Stack.Navigator
+                screenOptions={{
+                  headerStyle: {
+                    backgroundColor: COLORS.primary,
+                  },
+                  headerTintColor: '#FFF',
+                  headerTitleStyle: {
+                    fontWeight: 'bold',
+                  },
+                }}
+              >
+                <Stack.Screen
+                  name="Main"
+                  component={TabNavigator}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="Log"
+                  component={LogScreen}
+                  options={{
+                    title: 'Log Reading',
+                    presentation: 'modal',
+                  }}
+                />
+              </Stack.Navigator>
+            </NavigationContainer>
+          )}
+          <StatusBar style="light" />
+        </AppErrorBoundary>
       </PaperProvider>
     </SafeAreaProvider>
   );

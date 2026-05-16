@@ -77,7 +77,6 @@ export const exportCyclesToCSV = async () => {
     });
 
   } catch (error: any) {
-    console.error('Export Error:', error);
     Alert.alert('Export Failed', `An error occurred: ${error.message || 'Unknown error'}`);
   }
 };

@@ -13,7 +13,7 @@ interface AddPastCycleModalProps {
 
 export default function AddPastCycleModal({ visible, onDismiss }: AddPastCycleModalProps) {
   const theme = useTheme();
-  const { cycles, startNewCycle, logDayForDate } = useCycleStore();
+  const { addCompletedCycle } = useCycleStore();
 
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [peakDate, setPeakDate] = useState<Date | undefined>(undefined);
@@ -82,9 +82,7 @@ export default function AddPastCycleModal({ visible, onDismiss }: AddPastCycleMo
       days: [], // No daily readings for simplified history
     };
 
-    useCycleStore.setState(state => ({
-      cycles: [...state.cycles, newCycle].sort((a, b) => a.startDate.localeCompare(b.startDate)),
-    }));
+    addCompletedCycle(newCycle);
 
     Alert.alert('Success', 'Past cycle added successfully!');
     onDismiss();

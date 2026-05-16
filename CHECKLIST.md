@@ -61,6 +61,27 @@
 - [x] Import Raw CSV (Developer Tool only)
 - [x] **EAS Update (OTA) Support Configured**
 
+### Cloud Sync Dogfood V1
+
+- [x] Create cloud-sync branch `codex/cloud-sync-v1`
+- [x] Add Android side-by-side dogfood variant (`Fidelis Dogfood`, `com.daoster.app.dogfood`)
+- [x] Add Firebase config placeholders via Expo public env vars
+- [x] Add Firebase Auth and Firestore dependencies
+- [x] Add repository/data-access boundary under `src/services/cloudSync`
+- [x] Keep Zustand as the screen-facing state layer
+- [x] Add signed-out, workspace setup, invite join, and migration prompt screens
+- [x] Add owner/member role helpers and UI controls
+- [x] Add one-time invite code creation/join flow with hashed invite records
+- [x] Sync cycles and shared app settings through Firestore after workspace setup
+- [x] Keep notification permission/reminder time local per device
+- [x] Update reminder copy to neutral text only
+- [x] Preserve JSON backup, CSV export, and PDF export paths
+- [x] Add Firestore Security Rules denying by default
+- [x] Add Jest coverage for migration, role, and invite helpers
+- [ ] Run Firestore Security Rules tests in Firebase Emulator Suite
+- [ ] Fill Firebase Console values for dogfood project/app
+- [ ] Device-test two-account/two-phone sync and migration with exported backup in hand
+
 ### Build & Deployment
 - [x] Set up EAS Build
 - [x] Create standalone Android APK (preview build)
@@ -122,5 +143,6 @@
 ## Notes
 
 *   **Beta Status:** Stabilization, backup, history, PDF export, and cycle data integrity fixes are merged to `main` and published to the `preview` OTA channel.
-*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path.
-*   **Next Priority:** Device-test the latest `preview` OTA: backup export/import, daily logging edits, monitor reset on a selected date, delete completed cycle, History trends/chart, and PDF chart export.
+*   **Cloud Dogfood Status:** Cloud sync v1 is implemented on `codex/cloud-sync-v1` for Android dogfood builds only. Stable `com.daoster.app` remains configured as the default package.
+*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Google sign-in still needs Firebase Console OAuth client IDs.
+*   **Next Priority:** Configure Firebase dogfood project values, deploy Firestore rules, run emulator rules tests, then device-test two-account sync with `eas build --profile dogfood --platform android`.

@@ -277,7 +277,6 @@ export async function exportMarquetteChartPdf(cycles: Cycle[]) {
       dialogTitle: 'Export Marquette Chart PDF',
     });
   } catch (error: any) {
-    console.error('PDF Export Error:', error);
     Alert.alert('PDF Export Failed', `An error occurred: ${error.message || 'Unknown error'}`);
   }
 }

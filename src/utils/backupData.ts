@@ -145,7 +145,6 @@ export async function exportBackupData() {
       dialogTitle: 'Export Fidelis Backup',
     });
   } catch (error: any) {
-    console.error('Backup Export Error:', error);
     Alert.alert('Backup Failed', `An error occurred: ${error.message || 'Unknown error'}`);
   }
 }
@@ -171,7 +170,6 @@ export async function importBackupFromUserFile() {
     restoreBackupData(backup);
     Alert.alert('Success', 'Backup data imported.');
   } catch (error: any) {
-    console.error('Backup Import Error:', error);
     Alert.alert('Import Failed', `Could not import backup. Details: ${error.message || error}`);
   }
 }

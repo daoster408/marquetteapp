@@ -39,6 +39,55 @@ export interface AppSettings {
   intention: 'TTA' | 'TTC'; // Trying to Avoid (TTA) or Trying to Conceive (TTC)
 }
 
+// Cloud sync roles
+export type CoupleRole = 'owner' | 'member';
+
+// Firebase Auth account metadata. Do not put chart data here.
+export interface CloudUser {
+  uid: string;
+  displayName?: string | null;
+  email?: string | null;
+  photoURL?: string | null;
+  activeCoupleId?: string | null;
+}
+
+export interface CoupleMember {
+  uid: string;
+  role: CoupleRole;
+  joinedAt?: string;
+  invitedBy?: string;
+  removedAt?: string | null;
+}
+
+export interface CoupleWorkspace {
+  id: string;
+  createdBy: string;
+  createdAt?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
+}
+
+export interface SharedAppSettings {
+  conservativeMode: boolean;
+  intention: AppSettings['intention'];
+}
+
+export interface CloudWorkspaceData {
+  couple: CoupleWorkspace | null;
+  cycles: Cycle[];
+  settings: SharedAppSettings;
+  members: CoupleMember[];
+}
+
+export type CloudMode = 'local' | 'signed-out' | 'workspace-required' | 'syncing' | 'ready' | 'error';
+
+export interface MigrationSnapshot {
+  cycles: Cycle[];
+  currentCycleId: string | null;
+  settings: AppSettings;
+}
+
 // Fertility window calculation result
 export interface FertilityWindow {
   status: FertilityStatus;

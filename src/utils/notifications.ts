@@ -38,11 +38,10 @@ export async function registerForPushNotificationsAsync() {
     }
     
     if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
-      return;
+      return false;
     }
   } else {
-    console.log('Must use physical device for Push Notifications');
+    return false;
   }
 
   return true;
@@ -59,8 +58,8 @@ export async function scheduleDailyReminder(hour: number, minute: number) {
 
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
-      title: "Time to Log! 📝",
-      body: "Don't forget to record your monitor reading today.",
+      title: 'Fidelis',
+      body: 'Time to log today.',
       sound: true,
     },
     trigger: {

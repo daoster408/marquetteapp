@@ -1,0 +1,170 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function couplePath(coupleId) {
+      return /databases/$(database)/documents/couples/$(coupleId);
+    }
+
+    function memberPath(coupleId, uid) {
+      return /databases/$(database)/documents/couples/$(coupleId)/members/$(uid);
+    }
+
+    function invitePath(coupleId, codeId) {
+      return /databases/$(database)/documents/couples/$(coupleId)/inviteCodes/$(codeId);
+    }
+
+    function coupleActive(coupleId) {
+      return exists(couplePath(coupleId)) &&
+        get(couplePath(coupleId)).data.deletedAt == null;
+    }
+
+    function activeMember(coupleId) {
+      return signedIn() &&
+        coupleActive(coupleId) &&
+        exists(memberPath(coupleId, request.auth.uid)) &&
+        get(memberPath(coupleId, request.auth.uid)).data.removedAt == null;
+    }
+
+    function owner(coupleId) {
+      return activeMember(coupleId) &&
+        get(memberPath(coupleId, request.auth.uid)).data.role == 'owner';
+    }
+
+    function userProfileKeysOnly() {
+      return request.resource.data.keys().hasOnly([
+        'uid',
+        'displayName',
+        'email',
+        'photoURL',
+        'createdAt',
+        'lastSignedInAt',
+        'activeCoupleId'
+      ]);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && uid == request.auth.uid;
+      allow create, update: if signedIn() &&
+        uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid &&
+        userProfileKeysOnly();
+      allow delete: if false;
+    }
+
+    match /couples/{coupleId} {
+      allow read: if activeMember(coupleId);
+      allow create: if signedIn() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.deletedAt == null;
+      allow update: if activeMember(coupleId) &&
+        (
+          owner(coupleId) ||
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['deletedAt'])
+        );
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if activeMember(coupleId);
+        allow create: if signedIn() &&
+          uid == request.auth.uid &&
+          request.resource.data.uid == request.auth.uid &&
+          (
+            (
+              request.resource.data.role == 'owner' &&
+              getAfter(couplePath(coupleId)).data.createdBy == request.auth.uid
+            ) ||
+            (
+              request.resource.data.role == 'member' &&
+              request.resource.data.inviteCodeId is string &&
+              getAfter(invitePath(coupleId, request.resource.data.inviteCodeId)).data.usedBy == request.auth.uid &&
+              getAfter(invitePath(coupleId, request.resource.data.inviteCodeId)).data.usedAt != null
+            )
+          );
+        allow update: if owner(coupleId) &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['removedAt']);
+        allow delete: if settingId == 'app' && owner(coupleId);
+      }
+
+      match /inviteCodes/{codeId} {
+        allow read: if signedIn();
+        allow create: if owner(coupleId) &&
+          request.resource.data.keys().hasOnly([
+            'codeHash',
+            'createdAt',
+            'createdBy',
+            'expiresAt',
+            'usedAt',
+            'usedBy'
+          ]) &&
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.usedAt == null &&
+          request.resource.data.usedBy == null;
+        allow update: if (
+          owner(coupleId) ||
+          (
+            signedIn() &&
+            resource.data.usedAt == null &&
+            resource.data.usedBy == null &&
+            request.time < resource.data.expiresAt &&
+            request.resource.data.codeHash == resource.data.codeHash &&
+            request.resource.data.createdBy == resource.data.createdBy &&
+            request.resource.data.expiresAt == resource.data.expiresAt &&
+            request.resource.data.usedBy == request.auth.uid &&
+            request.resource.data.usedAt != null
+          )
+        );
+        allow delete: if owner(coupleId);
+      }
+
+      match /cycles/{cycleId} {
+        allow read, create, update, delete: if activeMember(coupleId);
+      }
+
+      match /settings/{settingId} {
+        allow read: if settingId == 'app' && activeMember(coupleId);
+        allow create: if settingId == 'app' &&
+          signedIn() &&
+          request.resource.data.keys().hasOnly([
+            'conservativeMode',
+            'intention',
+            'updatedAt',
+            'updatedBy'
+          ]) &&
+          request.resource.data.updatedBy == request.auth.uid &&
+          (
+            activeMember(coupleId) ||
+            (
+              getAfter(couplePath(coupleId)).data.createdBy == request.auth.uid &&
+              getAfter(memberPath(coupleId, request.auth.uid)).data.role == 'owner' &&
+              getAfter(memberPath(coupleId, request.auth.uid)).data.removedAt == null
+            )
+          );
+        allow update: if settingId == 'app' &&
+          activeMember(coupleId) &&
+          request.resource.data.keys().hasOnly([
+            'conservativeMode',
+            'intention',
+            'updatedAt',
+            'updatedBy'
+          ]) &&
+          request.resource.data.updatedBy == request.auth.uid;
+        allow delete: if settingId == 'app' && owner(coupleId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

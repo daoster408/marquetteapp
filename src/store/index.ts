@@ -1,25 +1,96 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Cycle, DayLog, MonitorReading, AppSettings, BleedingLevel } from '../types';
 import {
-  generateId,
-  getTodayISO,
+  AppSettings,
+  BleedingLevel,
+  CloudMode,
+  CloudUser,
+  CoupleMember,
+  Cycle,
+  DayLog,
+  MigrationSnapshot,
+  MonitorReading,
+  SharedAppSettings,
+} from '../types';
+import {
   addDaysToISO,
-  getCycleDay,
   findPeakDay,
+  generateId,
+  getCycleDay,
+  getTodayISO,
 } from '../utils/marquetteAlgorithm';
 import { getCyclePeakDay, normalizeCycleData, sortCycleDays } from '../utils/cycleData';
 import { generateMockCycles } from '../utils/mockData';
 import { parseCSVData } from '../utils/importData';
+import { canUploadMigration, createMigrationSnapshot } from '../services/cloudSync/migration';
+import { CloudRepository, getActiveMember, isOwner } from '../services/cloudSync/repository';
+
+const defaultSettings: AppSettings = {
+  conservativeMode: false,
+  notificationsEnabled: true,
+  intention: 'TTA',
+};
+
+let authUnsubscribe: (() => void) | null = null;
+let workspaceUnsubscribe: (() => void) | null = null;
+let cloudRepository: CloudRepository | null = null;
+
+function getCloudRepository(): CloudRepository {
+  if (!cloudRepository) {
+    cloudRepository = require('../services/cloudSync/firestoreRepository').firestoreCycleRepository;
+  }
+
+  return cloudRepository as CloudRepository;
+}
+
+function getCurrentCycleId(cycles: Cycle[]): string | null {
+  const current = [...cycles]
+    .filter(cycle => !cycle.isComplete)
+    .sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+
+  return current?.id || null;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Something went wrong.';
+}
 
 interface CycleState {
-  // Data
+  // Local/screen-facing data
   cycles: Cycle[];
   currentCycleId: string | null;
   settings: AppSettings;
 
-  // Actions
+  // Cloud session/workspace state
+  cloudMode: CloudMode;
+  cloudConfigured: boolean;
+  googleSignInConfigured: boolean;
+  cloudUser: CloudUser | null;
+  activeCoupleId: string | null;
+  members: CoupleMember[];
+  cloudError: string | null;
+  latestInviteCode: string | null;
+  pendingLocalMigration: MigrationSnapshot | null;
+  migrationCompletedCoupleIds: string[];
+
+  // Cloud actions
+  initializeCloudSync: () => void;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signOutUser: () => Promise<void>;
+  createCloudWorkspace: () => Promise<void>;
+  uploadLocalDataToCloud: () => Promise<void>;
+  dismissLocalMigration: () => void;
+  createSpouseInviteCode: () => Promise<void>;
+  joinWorkspaceWithInvite: (inviteCode: string) => Promise<void>;
+  removeWorkspaceMember: (memberUid: string) => Promise<void>;
+  deleteCloudWorkspace: () => Promise<void>;
+  clearCloudError: () => void;
+  isCurrentUserOwner: () => boolean;
+
+  // Cycle actions
   startNewCycle: (startDate?: string) => void;
   logDay: (reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => void;
   logDayForDate: (date: string, reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => void;
@@ -27,64 +98,344 @@ interface CycleState {
   markMonitorReset: (date?: string) => void;
   toggleIntercourse: (date: string) => void;
   deleteCompletedCycle: (cycleId: string) => void;
+  addCompletedCycle: (cycle: Cycle) => void;
 
-  // Getters (computed from state)
+  // Getters
   getCurrentCycle: () => Cycle | null;
   getCompletedCycles: () => Cycle[];
   getTodaysCycleDay: () => number | null;
   getTodaysLog: () => DayLog | null;
 
-  // Reset
+  // Reset/import
   resetAllData: () => void;
   restoreBackupData: (backup: Pick<CycleState, 'cycles' | 'currentCycleId' | 'settings'>) => void;
 
-  // --- Developer Actions ---
+  // Developer actions
   loadMockCycles: () => void;
   importCyclesFromCSV: (csvContent: string) => void;
 }
 
 export const useCycleStore = create<CycleState>()(
   persist(
-    (set, get) => ({
-      // Initial state
-      cycles: [],
-      currentCycleId: null,
-      settings: {
-        conservativeMode: false,
-        notificationsEnabled: true,
-        intention: 'TTA',
-      },
+    (set, get) => {
+      const setCloudError = (error: unknown) => {
+        set({ cloudError: getErrorMessage(error) });
+      };
 
-      // Start a new cycle
-      startNewCycle: (startDate?: string) => {
-        const today = startDate || getTodayISO();
+      const getCloudContext = () => {
         const state = get();
-        const currentCycle = state.currentCycleId
-          ? state.cycles.find(c => c.id === state.currentCycleId)
-          : null;
-
-        if (today > getTodayISO() || (currentCycle && today <= currentCycle.startDate)) {
-          return;
+        if (!state.cloudUser || !state.activeCoupleId || state.cloudMode !== 'ready') {
+          return null;
         }
+        return { user: state.cloudUser, coupleId: state.activeCoupleId };
+      };
 
-        // Close the current cycle if one exists
-        let updatedCycles = [...state.cycles];
-        if (state.currentCycleId) {
-          updatedCycles = updatedCycles.map(cycle => {
-            if (cycle.id === state.currentCycleId) {
-              // End date is day before new cycle starts
+      const saveCycleToCloud = (cycle: Cycle) => {
+        const context = getCloudContext();
+        if (!context) return;
+
+        getCloudRepository()
+          .saveCycle(context.coupleId, context.user, normalizeCycleData(cycle))
+          .catch(setCloudError);
+      };
+
+      const deleteCycleFromCloud = (cycleId: string) => {
+        const context = getCloudContext();
+        if (!context) return;
+
+        getCloudRepository()
+          .deleteCycle(context.coupleId, cycleId)
+          .catch(setCloudError);
+      };
+
+      const subscribeToWorkspace = (coupleId: string) => {
+        workspaceUnsubscribe?.();
+        workspaceUnsubscribe = getCloudRepository().subscribeToWorkspace(
+          coupleId,
+          data => {
+            const activeMember = getActiveMember(data.members, get().cloudUser?.uid);
+            const localSettings = get().settings;
+
+            if (!data.couple || data.couple.deletedAt || !activeMember) {
+              set({
+                cloudMode: 'workspace-required',
+                activeCoupleId: null,
+                members: data.members,
+                cycles: [],
+                currentCycleId: null,
+              });
+              return;
+            }
+
+            set({
+              cloudMode: 'ready',
+              activeCoupleId: coupleId,
+              members: data.members,
+              cycles: data.cycles,
+              currentCycleId: getCurrentCycleId(data.cycles),
+              settings: {
+                ...localSettings,
+                conservativeMode: data.settings.conservativeMode,
+                intention: data.settings.intention,
+              },
+              cloudError: null,
+            });
+          },
+          error => set({ cloudMode: 'error', cloudError: getErrorMessage(error) })
+        );
+      };
+
+      return {
+        cycles: [],
+        currentCycleId: null,
+        settings: defaultSettings,
+        cloudMode: 'local',
+        cloudConfigured: false,
+        googleSignInConfigured: false,
+        cloudUser: null,
+        activeCoupleId: null,
+        members: [],
+        cloudError: null,
+        latestInviteCode: null,
+        pendingLocalMigration: null,
+        migrationCompletedCoupleIds: [],
+
+        initializeCloudSync: () => {
+          const repository = getCloudRepository();
+          const cloudConfigured = repository.isConfigured();
+          const googleSignInConfigured = repository.isGoogleSignInConfigured();
+          const migrationSnapshot = createMigrationSnapshot(
+            get().cycles,
+            get().currentCycleId,
+            get().settings
+          );
+
+          set({
+            cloudConfigured,
+            googleSignInConfigured,
+            pendingLocalMigration: migrationSnapshot,
+            cloudMode: cloudConfigured ? 'signed-out' : 'local',
+          });
+
+          if (!cloudConfigured || authUnsubscribe) return;
+
+          authUnsubscribe = repository.subscribeToAuth(user => {
+            workspaceUnsubscribe?.();
+            workspaceUnsubscribe = null;
+
+            if (!user) {
+              set({
+                cloudUser: null,
+                activeCoupleId: null,
+                members: [],
+                cloudMode: 'signed-out',
+                latestInviteCode: null,
+              });
+              return;
+            }
+
+            set({
+              cloudUser: user,
+              activeCoupleId: user.activeCoupleId || null,
+              cloudMode: user.activeCoupleId ? 'syncing' : 'workspace-required',
+              cloudError: null,
+            });
+
+            if (user.activeCoupleId) {
+              subscribeToWorkspace(user.activeCoupleId);
+            }
+          });
+        },
+
+        signInWithEmail: async (email, password) => {
+          try {
+            await getCloudRepository().signInWithEmail({ email, password });
+          } catch (error) {
+            setCloudError(error);
+            throw error;
+          }
+        },
+
+        signUpWithEmail: async (email, password, displayName) => {
+          try {
+            await getCloudRepository().signUpWithEmail({ email, password, displayName });
+          } catch (error) {
+            setCloudError(error);
+            throw error;
+          }
+        },
+
+        signInWithGoogle: async () => {
+          try {
+            await getCloudRepository().signInWithGoogle();
+          } catch (error) {
+            setCloudError(error);
+            throw error;
+          }
+        },
+
+        signOutUser: async () => {
+          try {
+            workspaceUnsubscribe?.();
+            workspaceUnsubscribe = null;
+            await getCloudRepository().signOut();
+            set({
+              cloudUser: null,
+              activeCoupleId: null,
+              members: [],
+              cloudMode: get().cloudConfigured ? 'signed-out' : 'local',
+              latestInviteCode: null,
+            });
+          } catch (error) {
+            setCloudError(error);
+          }
+        },
+
+        createCloudWorkspace: async () => {
+          const user = get().cloudUser;
+          if (!user) return;
+
+          try {
+            const coupleId = await getCloudRepository().createWorkspace(user, get().settings);
+            const updatedUser = { ...user, activeCoupleId: coupleId };
+            set({
+              cloudUser: updatedUser,
+              activeCoupleId: coupleId,
+              cloudMode: 'syncing',
+              cloudError: null,
+            });
+            subscribeToWorkspace(coupleId);
+          } catch (error) {
+            setCloudError(error);
+          }
+        },
+
+        uploadLocalDataToCloud: async () => {
+          const { activeCoupleId, cloudUser, pendingLocalMigration, cycles, migrationCompletedCoupleIds } = get();
+          if (!activeCoupleId || !cloudUser) return;
+
+          const permission = canUploadMigration(pendingLocalMigration, cycles);
+          if (!permission.allowed || !pendingLocalMigration) {
+            set({ cloudError: permission.reason || 'Migration is not available.' });
+            return;
+          }
+
+          try {
+            await getCloudRepository().uploadMigration(activeCoupleId, cloudUser, pendingLocalMigration);
+            set({
+              pendingLocalMigration: null,
+              migrationCompletedCoupleIds: [...new Set([...migrationCompletedCoupleIds, activeCoupleId])],
+              cloudError: null,
+            });
+          } catch (error) {
+            setCloudError(error);
+          }
+        },
+
+        dismissLocalMigration: () => set({ pendingLocalMigration: null }),
+
+        createSpouseInviteCode: async () => {
+          const { activeCoupleId, cloudUser, members } = get();
+          if (!activeCoupleId || !cloudUser || !isOwner(members, cloudUser.uid)) {
+            set({ cloudError: 'Only workspace owners can create invite codes.' });
+            return;
+          }
+
+          try {
+            const code = await getCloudRepository().createInviteCode(activeCoupleId, cloudUser);
+            set({ latestInviteCode: code, cloudError: null });
+          } catch (error) {
+            setCloudError(error);
+          }
+        },
+
+        joinWorkspaceWithInvite: async inviteCode => {
+          const user = get().cloudUser;
+          if (!user) return;
+
+          try {
+            const coupleId = await getCloudRepository().joinWorkspaceWithInvite(user, inviteCode);
+            const updatedUser = { ...user, activeCoupleId: coupleId };
+            set({
+              cloudUser: updatedUser,
+              activeCoupleId: coupleId,
+              cloudMode: 'syncing',
+              cloudError: null,
+            });
+            subscribeToWorkspace(coupleId);
+          } catch (error) {
+            setCloudError(error);
+          }
+        },
+
+        removeWorkspaceMember: async memberUid => {
+          const { activeCoupleId, cloudUser, members } = get();
+          if (!activeCoupleId || !cloudUser || !isOwner(members, cloudUser.uid)) {
+            set({ cloudError: 'Only workspace owners can remove members.' });
+            return;
+          }
+
+          try {
+            await getCloudRepository().removeMember(activeCoupleId, cloudUser, memberUid);
+          } catch (error) {
+            setCloudError(error);
+          }
+        },
+
+        deleteCloudWorkspace: async () => {
+          const { activeCoupleId, cloudUser, members } = get();
+          if (!activeCoupleId || !cloudUser || !isOwner(members, cloudUser.uid)) {
+            set({ cloudError: 'Only workspace owners can delete the workspace.' });
+            return;
+          }
+
+          try {
+            await getCloudRepository().deleteWorkspace(activeCoupleId, cloudUser);
+            set({
+              activeCoupleId: null,
+              members: [],
+              cycles: [],
+              currentCycleId: null,
+              cloudMode: 'workspace-required',
+            });
+          } catch (error) {
+            setCloudError(error);
+          }
+        },
+
+        clearCloudError: () => set({ cloudError: null }),
+
+        isCurrentUserOwner: () => {
+          const { cloudUser, members } = get();
+          return isOwner(members, cloudUser?.uid);
+        },
+
+        startNewCycle: (startDate?: string) => {
+          const today = startDate || getTodayISO();
+          const state = get();
+          const currentCycle = state.currentCycleId
+            ? state.cycles.find(c => c.id === state.currentCycleId)
+            : null;
+
+          if (today > getTodayISO() || (currentCycle && today <= currentCycle.startDate)) {
+            return;
+          }
+
+          let updatedCycles = [...state.cycles];
+          const cyclesToSync: Cycle[] = [];
+
+          if (state.currentCycleId) {
+            updatedCycles = updatedCycles.map(cycle => {
+              if (cycle.id !== state.currentCycleId) return cycle;
+
               const prevEndDate = addDaysToISO(today, -1);
-              
-              // Calculate length using the corrected end date
               const cycleLength = getCycleDay(cycle, prevEndDate);
-              
               const days = sortCycleDays(cycle.days);
               const peakDay = getCyclePeakDay({ ...cycle, days });
-              let lutealPhaseLength: number | undefined;
-              if (peakDay && cycleLength > peakDay) {
-                lutealPhaseLength = cycleLength - peakDay;
-              }
-              return {
+              const lutealPhaseLength = peakDay && cycleLength > peakDay
+                ? cycleLength - peakDay
+                : undefined;
+              const completedCycle = {
                 ...cycle,
                 days,
                 peakDay,
@@ -93,278 +444,247 @@ export const useCycleStore = create<CycleState>()(
                 lutealPhaseLength,
                 isComplete: true,
               };
-            }
-            return cycle;
+              cyclesToSync.push(completedCycle);
+              return completedCycle;
+            });
+          }
+
+          const newCycle: Cycle = {
+            id: generateId(),
+            startDate: today,
+            days: [],
+            isComplete: false,
+          };
+          cyclesToSync.push(newCycle);
+
+          set({
+            cycles: [...updatedCycles, newCycle],
+            currentCycleId: newCycle.id,
           });
-        }
+          cyclesToSync.forEach(saveCycleToCloud);
+        },
 
-        // Create new cycle
-        const newCycle: Cycle = {
-          id: generateId(),
-          startDate: today,
-          days: [],
-          isComplete: false,
-        };
+        logDay: (reading, bleeding, notes) => {
+          get().logDayForDate(getTodayISO(), reading, bleeding, notes);
+        },
 
-        set({
-          cycles: [...updatedCycles, newCycle],
-          currentCycleId: newCycle.id,
-        });
-      },
+        logDayForDate: (date, reading, bleeding, notes) => {
+          const state = get();
+          if (!state.currentCycleId) return;
 
-      // Log today's reading
-      logDay: (reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => {
-        const today = getTodayISO();
-        get().logDayForDate(today, reading, bleeding, notes);
-      },
+          const currentCycle = state.cycles.find(c => c.id === state.currentCycleId);
+          if (!currentCycle) return;
 
-      // Log a specific date's reading
-      logDayForDate: (date: string, reading: MonitorReading, bleeding?: BleedingLevel, notes?: string) => {
-        const state = get();
-        if (!state.currentCycleId) return;
-
-        const currentCycle = state.cycles.find(c => c.id === state.currentCycleId);
-        if (!currentCycle) return;
-
-        const cycleDay = getCycleDay(currentCycle, date);
-
-        // Check if this is an auto-peak day (day after first Peak)
-        const existingPeakDay = findPeakDay(currentCycle.days);
-        const isAutoPeak = existingPeakDay !== null &&
-          cycleDay === existingPeakDay + 1 &&
-          reading === 'peak';
-
-        const newLog: DayLog = {
-          date,
-          cycleDay,
-          reading,
-          bleeding,
-          notes,
-          isAutoPeak,
-        };
-
-        // Update or add the log
-        const existingIndex = currentCycle.days.findIndex(d => d.date === date);
-        let updatedDays: DayLog[];
-
-        if (existingIndex >= 0) {
-          updatedDays = [...currentCycle.days];
-          // Merge with existing log to preserve fields not being updated if we were partially updating
-          // But here we are overwriting core fields. 
-          // However, we want to ensure we don't lose 'intercourse' if it's not passed here (it's not).
-          // 'newLog' doesn't have intercourse field, so spreading newLog over existingLog would be safer if we want to preserve intercourse.
-          
-          updatedDays[existingIndex] = {
-            ...updatedDays[existingIndex],
-            ...newLog,
-            // Explicitly preserve intercourse if it exists in the old log
-            intercourse: updatedDays[existingIndex].intercourse
-          };
-        } else {
-          updatedDays = sortCycleDays([...currentCycle.days, newLog]);
-        }
-
-        const peakDay = findPeakDay(updatedDays) ?? undefined;
-
-        const updatedCycles = state.cycles.map(cycle => {
-          if (cycle.id === state.currentCycleId) {
-            return {
-              ...cycle,
-              days: updatedDays,
-              peakDay,
-            };
-          }
-          return cycle;
-        });
-
-        set({ cycles: updatedCycles });
-      },
-
-      // Update app settings
-      updateSettings: (newSettings: Partial<AppSettings>) => {
-        set(state => ({
-          settings: { ...state.settings, ...newSettings },
-        }));
-      },
-
-      // Mark that monitor was reset on the selected date
-      markMonitorReset: (date?: string) => {
-        const state = get();
-        if (!state.currentCycleId) return;
-
-        const resetDate = date || getTodayISO();
-        const currentCycle = state.cycles.find(c => c.id === state.currentCycleId);
-        if (!currentCycle) return;
-
-        const cycleDay = getCycleDay(currentCycle, resetDate);
-
-        const resetLog: DayLog = {
-          date: resetDate,
-          cycleDay,
-          reading: 'none',
-          isMonitorReset: true,
-          notes: 'Monitor reset - set to CD4',
-        };
-
-        const existingIndex = currentCycle.days.findIndex(d => d.date === resetDate);
-        let updatedDays: DayLog[];
-
-        if (existingIndex >= 0) {
-          updatedDays = [...currentCycle.days];
-          updatedDays[existingIndex] = {
-            ...updatedDays[existingIndex],
-            ...resetLog,
-            intercourse: updatedDays[existingIndex].intercourse,
-          };
-        } else {
-          updatedDays = sortCycleDays([...currentCycle.days, resetLog]);
-        }
-
-        const peakDay = findPeakDay(updatedDays) ?? undefined;
-        const updatedCycles = state.cycles.map(cycle => {
-          if (cycle.id === state.currentCycleId) {
-            return { ...cycle, days: updatedDays, peakDay };
-          }
-          return cycle;
-        });
-
-        set({ cycles: updatedCycles });
-      },
-
-      // Toggle intercourse for a specific date
-      toggleIntercourse: (date: string) => {
-        const state = get();
-        if (!state.currentCycleId) return;
-
-        const currentCycle = state.cycles.find(c => c.id === state.currentCycleId);
-        if (!currentCycle) return;
-
-        const existingIndex = currentCycle.days.findIndex(d => d.date === date);
-        let updatedDays: DayLog[];
-
-        if (existingIndex >= 0) {
-          // Log exists, toggle intercourse status
-          updatedDays = [...currentCycle.days];
-          const existingLog = updatedDays[existingIndex];
-          updatedDays[existingIndex] = {
-            ...existingLog,
-            intercourse: !existingLog.intercourse,
-          };
-        } else {
-          // No log exists, create a new one
           const cycleDay = getCycleDay(currentCycle, date);
+          const existingPeakDay = findPeakDay(currentCycle.days);
+          const isAutoPeak = existingPeakDay !== null &&
+            cycleDay === existingPeakDay + 1 &&
+            reading === 'peak';
+
           const newLog: DayLog = {
             date,
             cycleDay,
-            reading: 'none',
-            intercourse: true,
+            reading,
+            bleeding,
+            notes,
+            isAutoPeak,
           };
-          updatedDays = sortCycleDays([...currentCycle.days, newLog]);
-        }
 
-        const updatedCycles = state.cycles.map(cycle => {
-          if (cycle.id === state.currentCycleId) {
-            return { ...cycle, days: updatedDays };
+          const existingIndex = currentCycle.days.findIndex(d => d.date === date);
+          let updatedDays: DayLog[];
+
+          if (existingIndex >= 0) {
+            updatedDays = [...currentCycle.days];
+            updatedDays[existingIndex] = {
+              ...updatedDays[existingIndex],
+              ...newLog,
+              intercourse: updatedDays[existingIndex].intercourse,
+            };
+          } else {
+            updatedDays = sortCycleDays([...currentCycle.days, newLog]);
           }
-          return cycle;
-        });
 
-        set({ cycles: updatedCycles });
-      },
+          const peakDay = findPeakDay(updatedDays) ?? undefined;
+          let updatedCycle: Cycle | null = null;
+          const updatedCycles = state.cycles.map(cycle => {
+            if (cycle.id !== state.currentCycleId) return cycle;
+            updatedCycle = { ...cycle, days: updatedDays, peakDay };
+            return updatedCycle;
+          });
 
-      deleteCompletedCycle: (cycleId: string) => {
-        set(state => {
+          set({ cycles: updatedCycles });
+          if (updatedCycle) saveCycleToCloud(updatedCycle);
+        },
+
+        updateSettings: newSettings => {
+          set(state => ({
+            settings: { ...state.settings, ...newSettings },
+          }));
+
+          const context = getCloudContext();
+          const sharedSettings: Partial<SharedAppSettings> = {};
+          if ('conservativeMode' in newSettings) sharedSettings.conservativeMode = newSettings.conservativeMode;
+          if ('intention' in newSettings) sharedSettings.intention = newSettings.intention;
+
+          if (context && Object.keys(sharedSettings).length > 0) {
+            getCloudRepository()
+              .updateSharedSettings(context.coupleId, context.user, sharedSettings)
+              .catch(setCloudError);
+          }
+        },
+
+        markMonitorReset: (date?: string) => {
+          const state = get();
+          if (!state.currentCycleId) return;
+
+          const resetDate = date || getTodayISO();
+          const currentCycle = state.cycles.find(c => c.id === state.currentCycleId);
+          if (!currentCycle) return;
+
+          const cycleDay = getCycleDay(currentCycle, resetDate);
+          const resetLog: DayLog = {
+            date: resetDate,
+            cycleDay,
+            reading: 'none',
+            isMonitorReset: true,
+            notes: 'Monitor reset - set to CD4',
+          };
+
+          const existingIndex = currentCycle.days.findIndex(d => d.date === resetDate);
+          const updatedDays = existingIndex >= 0
+            ? currentCycle.days.map((day, index) => index === existingIndex
+              ? { ...day, ...resetLog, intercourse: day.intercourse }
+              : day)
+            : sortCycleDays([...currentCycle.days, resetLog]);
+
+          const peakDay = findPeakDay(updatedDays) ?? undefined;
+          const updatedCycle = { ...currentCycle, days: updatedDays, peakDay };
+          set({
+            cycles: state.cycles.map(cycle => cycle.id === state.currentCycleId ? updatedCycle : cycle),
+          });
+          saveCycleToCloud(updatedCycle);
+        },
+
+        toggleIntercourse: date => {
+          const state = get();
+          if (!state.currentCycleId) return;
+
+          const currentCycle = state.cycles.find(c => c.id === state.currentCycleId);
+          if (!currentCycle) return;
+
+          const existingIndex = currentCycle.days.findIndex(d => d.date === date);
+          const updatedDays = existingIndex >= 0
+            ? currentCycle.days.map((day, index) => index === existingIndex
+              ? { ...day, intercourse: !day.intercourse }
+              : day)
+            : sortCycleDays([
+                ...currentCycle.days,
+                {
+                  date,
+                  cycleDay: getCycleDay(currentCycle, date),
+                  reading: 'none',
+                  intercourse: true,
+                },
+              ]);
+
+          const updatedCycle = { ...currentCycle, days: updatedDays };
+          set({
+            cycles: state.cycles.map(cycle => cycle.id === state.currentCycleId ? updatedCycle : cycle),
+          });
+          saveCycleToCloud(updatedCycle);
+        },
+
+        deleteCompletedCycle: cycleId => {
+          const state = get();
           const cycleToDelete = state.cycles.find(cycle => cycle.id === cycleId);
 
           if (!cycleToDelete || !cycleToDelete.isComplete || cycleId === state.currentCycleId) {
-            return {};
+            return;
           }
 
-          return {
+          set({
             cycles: state.cycles.filter(cycle => cycle.id !== cycleId),
-          };
-        });
-      },
+          });
+          deleteCycleFromCloud(cycleId);
+        },
 
-      // Get current cycle
-      getCurrentCycle: () => {
-        const state = get();
-        if (!state.currentCycleId) return null;
-        return state.cycles.find(c => c.id === state.currentCycleId) || null;
-      },
+        addCompletedCycle: cycle => {
+          const normalized = normalizeCycleData(cycle);
+          set(state => ({
+            cycles: [...state.cycles, normalized].sort((a, b) => a.startDate.localeCompare(b.startDate)),
+          }));
+          saveCycleToCloud(normalized);
+        },
 
-      // Get completed cycles
-      getCompletedCycles: () => {
-        return get().cycles.filter(c => c.isComplete);
-      },
+        getCurrentCycle: () => {
+          const state = get();
+          if (!state.currentCycleId) return null;
+          return state.cycles.find(c => c.id === state.currentCycleId) || null;
+        },
 
-      // Get today's cycle day
-      getTodaysCycleDay: () => {
-        const currentCycle = get().getCurrentCycle();
-        if (!currentCycle) return null;
-        return getCycleDay(currentCycle, getTodayISO());
-      },
+        getCompletedCycles: () => get().cycles.filter(c => c.isComplete),
 
-      // Get today's log entry
-      getTodaysLog: () => {
-        const currentCycle = get().getCurrentCycle();
-        if (!currentCycle) return null;
-        const today = getTodayISO();
-        return currentCycle.days.find(d => d.date === today) || null;
-      },
+        getTodaysCycleDay: () => {
+          const currentCycle = get().getCurrentCycle();
+          if (!currentCycle) return null;
+          return getCycleDay(currentCycle, getTodayISO());
+        },
 
-      // Reset all data
-      resetAllData: () => {
-        set({
-          cycles: [],
-          currentCycleId: null,
-          settings: {
-            conservativeMode: false,
-            notificationsEnabled: true,
-            intention: 'TTA',
-          },
-        });
-      },
+        getTodaysLog: () => {
+          const currentCycle = get().getCurrentCycle();
+          if (!currentCycle) return null;
+          return currentCycle.days.find(d => d.date === getTodayISO()) || null;
+        },
 
-      restoreBackupData: (backup) => {
-        set({
-          cycles: backup.cycles.map(normalizeCycleData),
-          currentCycleId: backup.currentCycleId,
-          settings: backup.settings,
-        });
-      },
+        resetAllData: () => {
+          set({
+            cycles: [],
+            currentCycleId: null,
+            settings: defaultSettings,
+            pendingLocalMigration: null,
+          });
+        },
 
-      // --- Developer Actions ---
-      loadMockCycles: () => {
-        const { cycles, currentCycleId } = generateMockCycles();
-        set({
-          cycles,
-          currentCycleId,
-          settings: { // Reset settings to default
-            conservativeMode: false,
-            notificationsEnabled: true,
-            intention: 'TTA',
-          },
-        });
-      },
+        restoreBackupData: backup => {
+          const cycles = backup.cycles.map(normalizeCycleData);
+          set({
+            cycles,
+            currentCycleId: backup.currentCycleId,
+            settings: backup.settings,
+            pendingLocalMigration: createMigrationSnapshot(cycles, backup.currentCycleId, backup.settings),
+          });
+        },
 
-      // Import cycles from CSV data
-      importCyclesFromCSV: (csvContent: string) => {
-        const { cycles, currentCycleId } = parseCSVData(csvContent);
-        set({
-          cycles,
-          currentCycleId,
-          settings: { // Reset settings to default
-            conservativeMode: false,
-            notificationsEnabled: true,
-            intention: 'TTA',
-          },
-        });
-      },
-    }),
+        loadMockCycles: () => {
+          const { cycles, currentCycleId } = generateMockCycles();
+          set({
+            cycles,
+            currentCycleId,
+            settings: defaultSettings,
+            pendingLocalMigration: createMigrationSnapshot(cycles, currentCycleId, defaultSettings),
+          });
+        },
+
+        importCyclesFromCSV: csvContent => {
+          const { cycles, currentCycleId } = parseCSVData(csvContent);
+          set({
+            cycles,
+            currentCycleId,
+            settings: defaultSettings,
+            pendingLocalMigration: createMigrationSnapshot(cycles, currentCycleId, defaultSettings),
+          });
+        },
+      };
+    },
     {
       name: 'marquette-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: state => ({
+        cycles: state.cycles,
+        currentCycleId: state.currentCycleId,
+        settings: state.settings,
+        migrationCompletedCoupleIds: state.migrationCompletedCoupleIds,
+      }),
     }
   )
 );

@@ -15,11 +15,27 @@ interface Props {
 }
 
 export default function SettingsScreen({ navigation }: Props) {
-  const { settings, updateSettings, resetAllData, loadMockCycles } = useCycleStore();
+  const {
+    activeCoupleId,
+    cloudMode,
+    cloudUser,
+    createSpouseInviteCode,
+    deleteCloudWorkspace,
+    isCurrentUserOwner,
+    latestInviteCode,
+    members,
+    removeWorkspaceMember,
+    settings,
+    signOutUser,
+    updateSettings,
+    resetAllData,
+    loadMockCycles,
+  } = useCycleStore();
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showMockDataDialog, setShowMockDataDialog] = useState(false);
   const [showCSVImportDialog, setShowCSVImportDialog] = useState(false);
   const [showBackupImportDialog, setShowBackupImportDialog] = useState(false);
+  const [showDeleteWorkspaceDialog, setShowDeleteWorkspaceDialog] = useState(false);
   
   // Notification Time Picker State
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -36,6 +52,9 @@ export default function SettingsScreen({ navigation }: Props) {
   const appVersion = Constants.expoConfig?.version || 'Unknown';
   const deviceName = Constants.deviceName || 'Unknown';
   const platformOS = Platform.OS;
+  const cloudReady = cloudMode === 'ready' && !!activeCoupleId;
+  const isOwner = isCurrentUserOwner();
+  const activeMembers = members.filter(member => !member.removedAt);
 
   const handleNotificationToggle = async (value: boolean) => {
     if (value) {
@@ -134,7 +153,23 @@ Please describe the bug or feedback below:\n\n`;
           Alert.alert('Cannot Open Email', 'Please configure an email client on your device.');
         }
       })
-      .catch(err => console.error('An error occurred', err));
+      .catch(() => undefined);
+  };
+
+  const confirmRemoveMember = (memberUid: string) => {
+    Alert.alert(
+      'Remove Member?',
+      'This will remove this account from the shared workspace.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => removeWorkspaceMember(memberUid) },
+      ]
+    );
+  };
+
+  const confirmDeleteWorkspace = async () => {
+    setShowDeleteWorkspaceDialog(false);
+    await deleteCloudWorkspace();
   };
 
   const openMarquetteInfo = () => {
@@ -178,6 +213,79 @@ Please describe the bug or feedback below:\n\n`;
             <Text variant="bodySmall" style={styles.resetWarning}>
               This will erase current data and import from a selected CSV file.
             </Text>
+          </Card.Content>
+        </Card>
+      )}
+
+      {cloudReady && (
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Shared Workspace
+            </Text>
+            <Text variant="bodySmall" style={styles.dataInfo}>
+              Signed in as {cloudUser?.email || cloudUser?.displayName || 'this account'}.
+            </Text>
+            <Text variant="bodySmall" style={styles.dataInfo}>
+              Role: {isOwner ? 'Owner' : 'Member'}
+            </Text>
+
+            {isOwner && (
+              <>
+                <Button
+                  mode="outlined"
+                  icon="account-plus-outline"
+                  onPress={createSpouseInviteCode}
+                  style={styles.actionButton}
+                >
+                  Create Spouse Invite
+                </Button>
+
+                {latestInviteCode && (
+                  <Text selectable variant="bodyMedium" style={styles.inviteCode}>
+                    {latestInviteCode}
+                  </Text>
+                )}
+
+                <Divider style={styles.divider} />
+
+                {activeMembers.map(member => (
+                  <List.Item
+                    key={member.uid}
+                    title={member.uid === cloudUser?.uid ? 'You' : member.uid}
+                    description={member.role}
+                    left={props => <List.Icon {...props} icon={member.role === 'owner' ? 'shield-account' : 'account'} />}
+                    right={() => member.uid !== cloudUser?.uid && member.role !== 'owner' ? (
+                      <Button compact textColor={COLORS.warning} onPress={() => confirmRemoveMember(member.uid)}>
+                        Remove
+                      </Button>
+                    ) : null}
+                  />
+                ))}
+
+                <Divider style={styles.divider} />
+
+                <Button
+                  mode="outlined"
+                  icon="delete-outline"
+                  onPress={() => setShowDeleteWorkspaceDialog(true)}
+                  textColor={COLORS.warning}
+                  style={styles.resetButton}
+                >
+                  Delete Shared Workspace
+                </Button>
+              </>
+            )}
+
+            {!isOwner && (
+              <Text variant="bodySmall" style={styles.dataInfo}>
+                Owners manage invites, member removal, and workspace deletion.
+              </Text>
+            )}
+
+            <Button mode="text" onPress={signOutUser} style={styles.actionButton}>
+              Sign Out
+            </Button>
           </Card.Content>
         </Card>
       )}
@@ -422,8 +530,8 @@ Please describe the bug or feedback below:\n\n`;
           </Text>
 
           <Text variant="bodySmall" style={styles.dataInfo}>
-            Your data is stored locally on your device. No data is sent to
-            external servers. If you uninstall the app, your data will be lost.
+            JSON backup and CSV/PDF export remain manual sharing paths. Daily
+            reminders stay local to this device.
           </Text>
 
           <Text variant="bodySmall" style={styles.dataInfo}>
@@ -542,6 +650,23 @@ Please describe the bug or feedback below:\n\n`;
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Portal>
+        <Dialog visible={showDeleteWorkspaceDialog} onDismiss={() => setShowDeleteWorkspaceDialog(false)}>
+          <Dialog.Title>Delete Shared Workspace?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              This deletes the shared workspace in Firebase for all members. Export a backup first if you may need this data.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowDeleteWorkspaceDialog(false)}>Cancel</Button>
+            <Button onPress={confirmDeleteWorkspace} textColor={COLORS.warning}>
+              Delete Workspace
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </ScrollView>
   );
 }
@@ -636,6 +761,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  inviteCode: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.background,
+    color: COLORS.text,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
