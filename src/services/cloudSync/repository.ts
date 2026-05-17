@@ -14,7 +14,7 @@ export interface GoogleCredentials {
 export interface CloudRepository {
   isConfigured(): boolean;
   isGoogleSignInConfigured(): boolean;
-  subscribeToAuth(onChange: (user: CloudUser | null) => void): () => void;
+  subscribeToAuth(onChange: (user: CloudUser | null) => void, onError?: (error: Error) => void): () => void;
   signInWithEmail(credentials: AuthCredentials): Promise<void>;
   signUpWithEmail(credentials: AuthCredentials): Promise<void>;
   signInWithGoogle(credentials: GoogleCredentials): Promise<void>;

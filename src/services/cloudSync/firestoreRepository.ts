@@ -171,7 +171,7 @@ export const firestoreCycleRepository: CloudRepository = {
     return isGoogleConfigured();
   },
 
-  subscribeToAuth(onChange) {
+  subscribeToAuth(onChange, onError) {
     if (!isFirebaseConfigured()) {
       onChange(null);
       return () => undefined;
@@ -186,14 +186,13 @@ export const firestoreCycleRepository: CloudRepository = {
 
       try {
         await assertDogfoodAccess(user.email, user.uid);
+        const profile = await ensureUserProfile(user);
+        onChange(profile);
       } catch {
         await firebaseSignOut(auth);
+        onError?.(new Error('Sign-in succeeded, but this account could not open the dogfood family chart. Confirm the account is allowlisted and try again.'));
         onChange(null);
-        return;
       }
-
-      const profile = await ensureUserProfile(user);
-      onChange(profile);
     });
   },
 
@@ -204,6 +203,7 @@ export const firestoreCycleRepository: CloudRepository = {
     const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
     try {
       await assertDogfoodAccess(credential.user.email, credential.user.uid);
+      await ensureUserProfile(credential.user);
     } catch (error) {
       await firebaseSignOut(auth);
       throw error;

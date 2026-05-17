@@ -232,32 +232,35 @@ export const useCycleStore = create<CycleState>()(
           if (!cloudConfigured || authUnsubscribe) return;
 
           try {
-            authUnsubscribe = repository.subscribeToAuth(user => {
-              workspaceUnsubscribe?.();
-              workspaceUnsubscribe = null;
+            authUnsubscribe = repository.subscribeToAuth(
+              user => {
+                workspaceUnsubscribe?.();
+                workspaceUnsubscribe = null;
 
-              if (!user) {
+                if (!user) {
+                  set({
+                    cloudUser: null,
+                    activeCoupleId: null,
+                    members: [],
+                    cloudMode: 'signed-out',
+                    latestInviteCode: null,
+                  });
+                  return;
+                }
+
                 set({
-                  cloudUser: null,
-                  activeCoupleId: null,
-                  members: [],
-                  cloudMode: 'signed-out',
-                  latestInviteCode: null,
+                  cloudUser: user,
+                  activeCoupleId: user.activeCoupleId || null,
+                  cloudMode: user.activeCoupleId ? 'syncing' : 'workspace-required',
+                  cloudError: null,
                 });
-                return;
-              }
 
-              set({
-                cloudUser: user,
-                activeCoupleId: user.activeCoupleId || null,
-                cloudMode: user.activeCoupleId ? 'syncing' : 'workspace-required',
-                cloudError: null,
-              });
-
-              if (user.activeCoupleId) {
-                subscribeToWorkspace(user.activeCoupleId);
-              }
-            });
+                if (user.activeCoupleId) {
+                  subscribeToWorkspace(user.activeCoupleId);
+                }
+              },
+              error => set({ cloudError: getErrorMessage(error), cloudMode: 'signed-out' })
+            );
           } catch (error) {
             set({
               cloudMode: 'local',
