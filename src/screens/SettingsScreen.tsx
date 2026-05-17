@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Linking, Alert, Platform, Modal } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { Text, Card, Switch, Divider, List, Button, Portal, Dialog } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCycleStore } from '../store';
@@ -75,6 +76,35 @@ export default function SettingsScreen({ navigation }: Props) {
       // User turning OFF notifications
       updateSettings({ notificationsEnabled: false });
       await cancelAllNotifications();
+    }
+  };
+
+  const handleAppLockToggle = async (value: boolean) => {
+    if (!value) {
+      updateSettings({ appLockEnabled: false });
+      return;
+    }
+
+    const enrolledLevel = await LocalAuthentication.getEnrolledLevelAsync();
+    if (enrolledLevel === LocalAuthentication.SecurityLevel.NONE) {
+      Alert.alert(
+        'Device Lock Required',
+        'Set up fingerprint, face unlock, or another supported screen lock on this device before enabling app lock.'
+      );
+      updateSettings({ appLockEnabled: false });
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Unlock Fidelis',
+      cancelLabel: 'Cancel',
+      fallbackLabel: 'Use device passcode',
+      disableDeviceFallback: false,
+    });
+
+    updateSettings({ appLockEnabled: result.success });
+    if (!result.success) {
+      Alert.alert('App Lock Not Enabled', 'Fidelis needs a successful unlock before turning on app lock.');
     }
   };
 
@@ -519,6 +549,29 @@ Please describe the bug or feedback below:\n\n`;
             For questions about the method or to find an instructor, visit the
             Marquette University Natural Family Planning website.
           </Text>
+        </Card.Content>
+      </Card>
+
+      {/* Privacy */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Privacy
+          </Text>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text variant="bodyLarge">App Lock</Text>
+              <Text variant="bodySmall" style={styles.settingDescription}>
+                Require fingerprint, face unlock, or device passcode before showing your family chart.
+              </Text>
+            </View>
+            <Switch
+              value={Boolean(settings.appLockEnabled)}
+              onValueChange={handleAppLockToggle}
+              color={COLORS.primary}
+            />
+          </View>
         </Card.Content>
       </Card>
 

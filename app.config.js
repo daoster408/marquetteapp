@@ -23,6 +23,12 @@ module.exports = ({ config }) => ({
   plugins: [
     ...(config.plugins || []),
     'expo-web-browser',
+    [
+      'expo-local-authentication',
+      {
+        faceIDPermission: 'Allow Fidelis to unlock your family chart with Face ID.',
+      },
+    ],
   ],
   extra: {
     ...config.extra,

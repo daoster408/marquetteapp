@@ -131,6 +131,7 @@ A Catholic-aligned fertility tracking app implementing the Marquette Method of N
 - [x] Durable cloud auth persistence via React Native AsyncStorage
 - [ ] Device-verify cloud auth persistence across app restarts and OTA updates
 - [x] Rename shared-chart user-facing language from "workspace" to "family chart"
+- [x] Add optional device biometric/passcode app lock for chart access
 - [ ] Instructor connectivity / chart sharing
 - [ ] **Photo logging for test sticks (Monitor & LH strips)**
 - [ ] Breastfeeding protocol

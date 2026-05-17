@@ -10,6 +10,7 @@ const settings: AppSettings = {
   notificationsEnabled: true,
   reminderTime: '08:30',
   intention: 'TTC',
+  appLockEnabled: true,
 };
 
 const localCycle: Cycle = {
@@ -47,7 +48,7 @@ describe('cloud sync migration', () => {
     });
   });
 
-  it('keeps reminder settings local when creating shared settings', () => {
+  it('keeps device-only settings local when creating shared settings', () => {
     expect(toSharedSettings(settings)).toEqual({
       conservativeMode: true,
       intention: 'TTC',

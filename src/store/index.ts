@@ -30,6 +30,7 @@ const defaultSettings: AppSettings = {
   conservativeMode: false,
   notificationsEnabled: true,
   intention: 'TTA',
+  appLockEnabled: false,
 };
 
 let authUnsubscribe: (() => void) | null = null;

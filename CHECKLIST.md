@@ -86,6 +86,8 @@
 - [x] Add React Native AsyncStorage-backed Firebase Auth persistence
 - [ ] Device-verify Firebase Auth persistence across app restarts and OTA updates
 - [x] Rename user-facing "workspace" language to "family chart"
+- [x] Add optional biometric/device-passcode app lock for local chart access
+- [ ] Create new dogfood Play build with native app-lock module and Google OAuth redirect scheme
 - [x] Fill Firebase Console values for dogfood project/app
 - [x] Device-test two-account/two-phone join and shared sync with exported backup in hand
 - [ ] Device-test explicit local-to-cloud migration on a fresh dogfood workspace
@@ -152,7 +154,7 @@
 
 *   **Beta Status:** Stabilization, backup, history, PDF export, and cycle data integrity fixes are merged to `main` and published to the `preview` OTA channel.
 *   **Cloud Dogfood Status:** Cloud sync v1 is implemented on `codex/cloud-sync-v1` for Android dogfood builds only. Stable `com.daoster.app` remains configured as the default package.
-*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Google Sign-In still needs Firebase Console OAuth client IDs/SHA setup before the button enables. Auth persistence now uses React Native AsyncStorage and needs device verification through app restarts/OTA reloads.
+*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Google Sign-In still needs Firebase Console OAuth client IDs/SHA setup before the button enables. Auth persistence now uses React Native AsyncStorage and needs device verification through app restarts/OTA reloads. App lock uses a native Expo module, so it needs a new dogfood build and should not be shipped by OTA alone.
 *   **Dogfood Access:** Hardened dogfood builds now require approved testers in Firestore `dogfoodAllowedUsers/{firebase-auth-uid}` or `dogfoodAllowedEmails/{exact-auth-email}` docs with `enabled: true`; `EXPO_PUBLIC_DOGFOOD_ALLOWED_EMAILS` can also be set as an extra client-side gate.
 *   **Dogfood Language:** Backend/data model names stay stable for now (`couples`, workspace-oriented repository names); user-facing copy now says "family chart."
-*   **Next Priority:** Configure Google OAuth client IDs/SHA fingerprints, create a new dogfood build for the native redirect scheme, device-verify Google Sign-In and auth persistence, then add emulator rules tests for invite/owner/member paths.
+*   **Next Priority:** Configure Google OAuth client IDs/SHA fingerprints for `com.daoster.app.dogfood` using the Play App signing certificate, create a new dogfood build for the native redirect scheme and app-lock module, device-verify Google Sign-In/app lock/auth persistence, then add emulator rules tests for invite/owner/member paths.

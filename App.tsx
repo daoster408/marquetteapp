@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { AppState, View, ActivityIndicator, StyleSheet } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { PaperProvider, MD3LightTheme, Text } from 'react-native-paper';
+import { Button, PaperProvider, MD3LightTheme, Text } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
@@ -61,6 +62,42 @@ function LoadingScreen() {
       <Text variant="bodyMedium" style={styles.loadingText}>
         Loading...
       </Text>
+    </View>
+  );
+}
+
+function AppLockScreen({
+  error,
+  isUnlocking,
+  onUnlock,
+}: {
+  error: string | null;
+  isUnlocking: boolean;
+  onUnlock: () => void;
+}) {
+  return (
+    <View style={styles.loadingContainer}>
+      <MaterialCommunityIcons name="lock" size={44} color={COLORS.primary} />
+      <Text variant="headlineSmall" style={styles.loadingTitle}>
+        Unlock Fidelis
+      </Text>
+      <Text variant="bodyMedium" style={styles.loadingText}>
+        Use your device lock to open your family chart.
+      </Text>
+      <Button
+        mode="contained"
+        onPress={onUnlock}
+        loading={isUnlocking}
+        disabled={isUnlocking}
+        style={styles.unlockButton}
+      >
+        Unlock
+      </Button>
+      {!!error && (
+        <Text variant="bodySmall" style={styles.lockError}>
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -142,7 +179,11 @@ export default function App() {
     cloudMode,
     initializeCloudSync,
     pendingLocalMigration,
+    settings,
   } = useCycleStore();
+  const [isAppUnlocked, setIsAppUnlocked] = useState(false);
+  const [isAppUnlocking, setIsAppUnlocking] = useState(false);
+  const [appLockError, setAppLockError] = useState<string | null>(null);
 
   useEffect(() => {
     // Give the store time to hydrate from AsyncStorage
@@ -153,6 +194,51 @@ export default function App() {
 
     return () => clearTimeout(timer);
   }, [initializeCloudSync]);
+
+  useEffect(() => {
+    if (!settings.appLockEnabled) {
+      setIsAppUnlocked(true);
+      setAppLockError(null);
+    } else {
+      setIsAppUnlocked(false);
+    }
+  }, [settings.appLockEnabled]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', status => {
+      if (settings.appLockEnabled && status !== 'active') {
+        setIsAppUnlocked(false);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [settings.appLockEnabled]);
+
+  const unlockApp = useCallback(async () => {
+    if (isAppUnlocking) return;
+
+    setIsAppUnlocking(true);
+    setAppLockError(null);
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock Fidelis',
+        cancelLabel: 'Cancel',
+        fallbackLabel: 'Use device passcode',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        setIsAppUnlocked(true);
+        return;
+      }
+
+      setAppLockError('Fidelis is locked until your device verifies it is you.');
+    } catch {
+      setAppLockError('Device unlock is not available right now.');
+    } finally {
+      setIsAppUnlocking(false);
+    }
+  }, [isAppUnlocking]);
 
   if (!isReady) {
     return (
@@ -169,16 +255,26 @@ export default function App() {
     activeCoupleId &&
     pendingLocalMigration &&
     pendingLocalMigration.cycles.length > 0;
+  const shouldShowAppLock = Boolean(settings.appLockEnabled) &&
+    !isAppUnlocked &&
+    (cloudMode === 'local' || cloudMode === 'ready' || cloudMode === 'error');
 
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
         <AppErrorBoundary>
+          {shouldShowAppLock && (
+            <AppLockScreen
+              error={appLockError}
+              isUnlocking={isAppUnlocking}
+              onUnlock={unlockApp}
+            />
+          )}
           {cloudMode === 'signed-out' && <AuthScreen />}
-          {cloudMode === 'workspace-required' && <WorkspaceScreen />}
-          {(cloudMode === 'restoring-auth' || cloudMode === 'syncing') && <LoadingScreen />}
-          {shouldShowMigration && <MigrationScreen />}
-          {(cloudMode === 'local' || (cloudMode === 'ready' && !shouldShowMigration) || cloudMode === 'error') && (
+          {!shouldShowAppLock && cloudMode === 'workspace-required' && <WorkspaceScreen />}
+          {!shouldShowAppLock && (cloudMode === 'restoring-auth' || cloudMode === 'syncing') && <LoadingScreen />}
+          {!shouldShowAppLock && shouldShowMigration && <MigrationScreen />}
+          {!shouldShowAppLock && (cloudMode === 'local' || (cloudMode === 'ready' && !shouldShowMigration) || cloudMode === 'error') && (
             <NavigationContainer>
               <Stack.Navigator
                 screenOptions={{
@@ -230,5 +326,14 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: COLORS.textSecondary,
+  },
+  unlockButton: {
+    marginTop: 18,
+  },
+  lockError: {
+    color: COLORS.warning,
+    marginTop: 12,
+    paddingHorizontal: 28,
+    textAlign: 'center',
   },
 });
