@@ -681,6 +681,18 @@ Manual Firebase Console setup still required:
 - Deploy `firestore.rules`.
 - Add SHA fingerprints required by Google sign-in for the EAS dogfood build.
 
+### Product Language
+
+Use "family chart" in user-facing copy instead of "workspace." "Workspace" remains acceptable in backend/data-access code and this technical plan when referring to the Firestore authorization container. The UI should feel like a shared chart for a married couple, not a work collaboration tool.
+
+Preferred copy direction:
+
+- "Create workspace" -> "Start your family chart"
+- "Join workspace" -> "Join your family chart"
+- "Workspace members" -> "Family members"
+- "Delete workspace" -> "Delete family chart"
+- "Shared workspace" -> "Shared family chart"
+
 ### Implemented App Behavior
 
 - Firebase Auth + Firestore repository layer added under `src/services/cloudSync`.
@@ -695,6 +707,7 @@ Manual Firebase Console setup still required:
 - JSON backup, CSV export, and PDF export continue to read from the Zustand screen-facing state.
 - Daily reminder notification copy is neutral: `Fidelis` / `Time to log today.`
 - Console logging of backup/export/notification errors was removed to avoid accidental sensitive data leakage.
+- Real-device dogfood onboarding was verified after deploying a rules fix that lets an allowlisted invitee read only their own pending member document during the invite transaction.
 
 ### Security Rules
 
@@ -713,10 +726,12 @@ Rules deny by default and enforce:
 - Join flow can create only the joining user's `member` record as `member`, tied to a same-batch invite-code use.
 - User profile documents are restricted to non-health account metadata fields.
 - New dogfood user/profile/workspace/member writes require `dogfoodAllowedUsers/{request.auth.uid}` or `dogfoodAllowedEmails/{request.auth.token.email}` with `enabled: true`, so Play crawlers or leaked builds cannot create usable cloud workspaces or join invites unless explicitly allowlisted.
+- Invitees may read only `couples/{coupleId}/members/{request.auth.uid}` before joining so the client transaction can safely check whether the account is already a member. They cannot list members or read other member documents until active membership exists.
 
 ### Known Limitations / Follow-Up
 
-- Google sign-in is blocked until Firebase Console OAuth client IDs are available. The app currently supports Firebase email/password dogfood sign-in.
-- The installed Firebase JS SDK does not expose the previous React Native AsyncStorage auth persistence helper. Validate sign-in persistence on device; if unacceptable, switch to a Firebase/Expo auth pattern that provides durable native persistence.
+- Google Sign-In is now a high-priority dogfood follow-up because email/password onboarding is too clunky for spouse sharing. Required setup: enable the Google provider in Firebase Auth, configure OAuth client IDs for the dogfood Android app, add the correct SHA-1/SHA-256 fingerprints for the EAS/Play signing path, and then wire the existing auth repository to a Firebase-compatible Google credential flow.
+- Auth persistence is a high-priority dogfood follow-up. The app appears to log users out too often, possibly because the Firebase JS SDK is not using durable React Native persistence or because OTA reloads expose that weakness. Investigate the current `getAuth()` behavior and switch to a supported Expo/Firebase persistence pattern if needed.
+- Replace user-facing "workspace" language with "family chart" while leaving backend collection names and repository concepts stable unless a later migration justifies renaming them.
 - Firestore rules tests were not run against the emulator in this pass. Exact next step: install/run Firebase Emulator Suite, then add `@firebase/rules-unit-testing` cases for owner/member/non-member allow/deny paths using `firestore.rules`.
 - Full E2EE, photo storage, instructor sharing, complex roles, server reminders, and remote push remain deferred.
