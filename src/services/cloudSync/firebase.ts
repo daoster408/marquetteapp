@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
-import { Auth, getAuth } from 'firebase/auth';
+import { Auth, getAuth, initializeAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
 import { parseDogfoodAllowedEmails } from './access';
 
@@ -43,6 +44,14 @@ export function isGoogleConfigured(): boolean {
   return Boolean(extra.androidClientId && extra.webClientId);
 }
 
+export function getGoogleAuthConfig() {
+  const extra = getExtraConfig();
+  return {
+    androidClientId: extra.androidClientId || '',
+    webClientId: extra.webClientId || '',
+  };
+}
+
 export function isDogfoodBuild(): boolean {
   return Constants.expoConfig?.extra?.appVariant === 'dogfood';
 }
@@ -55,6 +64,23 @@ let appInstance: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let firestoreInstance: Firestore | null = null;
 
+function createAuth(app: FirebaseApp): Auth {
+  try {
+    const { getReactNativePersistence } = require('@firebase/auth') as {
+      getReactNativePersistence?: (storage: typeof AsyncStorage) => unknown;
+    };
+
+    if (getReactNativePersistence) {
+      return initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage) as never,
+      });
+    }
+  } catch {
+  }
+
+  return getAuth(app);
+}
+
 export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Firestore } {
   if (!isFirebaseConfigured()) {
     throw new Error('Firebase is not configured for this build.');
@@ -65,7 +91,7 @@ export function getFirebaseServices(): { app: FirebaseApp; auth: Auth; db: Fires
   }
 
   if (!authInstance) {
-    authInstance = getAuth(appInstance);
+    authInstance = createAuth(appInstance);
   }
 
   if (!firestoreInstance) {

@@ -31,12 +31,12 @@ export default function MigrationScreen() {
         <Card.Content>
           <Text variant="headlineSmall" style={styles.title}>Local Data Found</Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
-            {localCycleCount} local cycle(s) can be uploaded to this workspace.
+            {localCycleCount} local cycle(s) can be uploaded to this family chart.
           </Text>
 
           {hasCloudCycles ? (
             <Text variant="bodyMedium" style={styles.warning}>
-              This workspace already has cloud data, so local data was not uploaded automatically.
+              This family chart already has cloud data, so local data was not uploaded automatically.
             </Text>
           ) : (
             <Button
@@ -52,7 +52,7 @@ export default function MigrationScreen() {
           )}
 
           <Button mode="outlined" onPress={dismissLocalMigration} style={styles.button}>
-            Keep Cloud Workspace
+            Keep Cloud Family Chart
           </Button>
 
           {!!cloudError && (

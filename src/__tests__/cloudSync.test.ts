@@ -38,12 +38,12 @@ describe('cloud sync migration', () => {
     expect(createMigrationSnapshot([], null, settings)).toBeNull();
   });
 
-  it('blocks migration when the cloud workspace already has cycles', () => {
+  it('blocks migration when the cloud family chart already has cycles', () => {
     const snapshot = createMigrationSnapshot([localCycle], 'cycle-1', settings);
 
     expect(canUploadMigration(snapshot, [localCycle])).toEqual({
       allowed: false,
-      reason: 'This workspace already has cloud cycle data. Export a backup before choosing a deliberate merge path.',
+      reason: 'This family chart already has cloud cycle data. Export a backup before choosing a deliberate merge path.',
     });
   });
 

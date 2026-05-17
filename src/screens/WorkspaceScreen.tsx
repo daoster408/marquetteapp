@@ -42,7 +42,7 @@ export default function WorkspaceScreen() {
     <View style={styles.container}>
       <Card style={styles.card}>
         <Card.Content>
-          <Text variant="headlineSmall" style={styles.title}>Couple Workspace</Text>
+          <Text variant="headlineSmall" style={styles.title}>Family Chart</Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
             Signed in as {cloudUser?.email || cloudUser?.displayName || 'this account'}.
           </Text>
@@ -55,7 +55,7 @@ export default function WorkspaceScreen() {
             disabled={isSubmitting}
             style={styles.button}
           >
-            Create Workspace
+            Start Family Chart
           </Button>
 
           <Text variant="labelLarge" style={styles.dividerText}>or join with invite</Text>
@@ -76,7 +76,7 @@ export default function WorkspaceScreen() {
             disabled={isSubmitting || inviteCode.trim().length === 0}
             style={styles.button}
           >
-            Join Workspace
+            Join Family Chart
           </Button>
 
           <Button mode="text" onPress={signOutUser} style={styles.button}>

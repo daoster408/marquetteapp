@@ -159,7 +159,7 @@ Please describe the bug or feedback below:\n\n`;
   const confirmRemoveMember = (memberUid: string) => {
     Alert.alert(
       'Remove Member?',
-      'This will remove this account from the shared workspace.',
+      'This will remove this account from the shared family chart.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Remove', style: 'destructive', onPress: () => removeWorkspaceMember(memberUid) },
@@ -221,7 +221,7 @@ Please describe the bug or feedback below:\n\n`;
         <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              Shared Workspace
+              Shared Family Chart
             </Text>
             <Text variant="bodySmall" style={styles.dataInfo}>
               Signed in as {cloudUser?.email || cloudUser?.displayName || 'this account'}.
@@ -272,14 +272,14 @@ Please describe the bug or feedback below:\n\n`;
                   textColor={COLORS.warning}
                   style={styles.resetButton}
                 >
-                  Delete Shared Workspace
+                  Delete Shared Family Chart
                 </Button>
               </>
             )}
 
             {!isOwner && (
               <Text variant="bodySmall" style={styles.dataInfo}>
-                Owners manage invites, member removal, and workspace deletion.
+                Owners manage invites, member removal, and family chart deletion.
               </Text>
             )}
 
@@ -653,16 +653,16 @@ Please describe the bug or feedback below:\n\n`;
 
       <Portal>
         <Dialog visible={showDeleteWorkspaceDialog} onDismiss={() => setShowDeleteWorkspaceDialog(false)}>
-          <Dialog.Title>Delete Shared Workspace?</Dialog.Title>
+          <Dialog.Title>Delete Shared Family Chart?</Dialog.Title>
           <Dialog.Content>
             <Text variant="bodyMedium">
-              This deletes the shared workspace in Firebase for all members. Export a backup first if you may need this data.
+              This deletes the shared family chart in Firebase for all members. Export a backup first if you may need this data.
             </Text>
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setShowDeleteWorkspaceDialog(false)}>Cancel</Button>
             <Button onPress={confirmDeleteWorkspace} textColor={COLORS.warning}>
-              Delete Workspace
+              Delete Family Chart
             </Button>
           </Dialog.Actions>
         </Dialog>

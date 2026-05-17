@@ -24,7 +24,7 @@ import { getCyclePeakDay, normalizeCycleData, sortCycleDays } from '../utils/cyc
 import { generateMockCycles } from '../utils/mockData';
 import { parseCSVData } from '../utils/importData';
 import { canUploadMigration, createMigrationSnapshot } from '../services/cloudSync/migration';
-import { CloudRepository, getActiveMember, isOwner } from '../services/cloudSync/repository';
+import { CloudRepository, getActiveMember, GoogleCredentials, isOwner } from '../services/cloudSync/repository';
 
 const defaultSettings: AppSettings = {
   conservativeMode: false,
@@ -78,7 +78,7 @@ interface CycleState {
   initializeCloudSync: () => void;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (credentials: GoogleCredentials) => Promise<void>;
   signOutUser: () => Promise<void>;
   createCloudWorkspace: () => Promise<void>;
   uploadLocalDataToCloud: () => Promise<void>;
@@ -284,9 +284,9 @@ export const useCycleStore = create<CycleState>()(
           }
         },
 
-        signInWithGoogle: async () => {
+        signInWithGoogle: async credentials => {
           try {
-            await getCloudRepository().signInWithGoogle();
+            await getCloudRepository().signInWithGoogle(credentials);
           } catch (error) {
             setCloudError(error);
             throw error;
@@ -356,7 +356,7 @@ export const useCycleStore = create<CycleState>()(
         createSpouseInviteCode: async () => {
           const { activeCoupleId, cloudUser, members } = get();
           if (!activeCoupleId || !cloudUser || !isOwner(members, cloudUser.uid)) {
-            set({ cloudError: 'Only workspace owners can create invite codes.' });
+            set({ cloudError: 'Only family chart owners can create invite codes.' });
             return;
           }
 
@@ -390,7 +390,7 @@ export const useCycleStore = create<CycleState>()(
         removeWorkspaceMember: async memberUid => {
           const { activeCoupleId, cloudUser, members } = get();
           if (!activeCoupleId || !cloudUser || !isOwner(members, cloudUser.uid)) {
-            set({ cloudError: 'Only workspace owners can remove members.' });
+            set({ cloudError: 'Only family chart owners can remove members.' });
             return;
           }
 
@@ -404,7 +404,7 @@ export const useCycleStore = create<CycleState>()(
         deleteCloudWorkspace: async () => {
           const { activeCoupleId, cloudUser, members } = get();
           if (!activeCoupleId || !cloudUser || !isOwner(members, cloudUser.uid)) {
-            set({ cloudError: 'Only workspace owners can delete the workspace.' });
+            set({ cloudError: 'Only family chart owners can delete the family chart.' });
             return;
           }
 

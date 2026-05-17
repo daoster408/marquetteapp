@@ -15,6 +15,7 @@ const firebaseExtra = {
 module.exports = ({ config }) => ({
   ...config,
   name: isDogfood ? 'Fidelis Dogfood' : config.name,
+  scheme: isDogfood ? 'com.daoster.app.dogfood' : (config.scheme || 'com.daoster.app'),
   android: {
     ...config.android,
     package: isDogfood ? 'com.daoster.app.dogfood' : config.android?.package,

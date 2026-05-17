@@ -126,9 +126,11 @@ A Catholic-aligned fertility tracking app implementing the Marquette Method of N
 
 - [x] Cloud sync / user accounts dogfood v1 for Android
 - [x] Couples data sharing dogfood v1
-- [ ] Google Sign-In for dogfood cloud sync
-- [ ] Durable cloud auth persistence across app restarts and OTA updates
-- [ ] Rename shared-chart user-facing language from "workspace" to "family chart"
+- [ ] Google Sign-In OAuth setup and dogfood rebuild
+- [x] Google Sign-In app implementation behind dogfood config gate
+- [x] Durable cloud auth persistence via React Native AsyncStorage
+- [ ] Device-verify cloud auth persistence across app restarts and OTA updates
+- [x] Rename shared-chart user-facing language from "workspace" to "family chart"
 - [ ] Instructor connectivity / chart sharing
 - [ ] **Photo logging for test sticks (Monitor & LH strips)**
 - [ ] Breastfeeding protocol

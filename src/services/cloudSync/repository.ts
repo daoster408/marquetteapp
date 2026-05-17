@@ -6,13 +6,18 @@ export interface AuthCredentials {
   displayName?: string;
 }
 
+export interface GoogleCredentials {
+  idToken?: string | null;
+  accessToken?: string | null;
+}
+
 export interface CloudRepository {
   isConfigured(): boolean;
   isGoogleSignInConfigured(): boolean;
   subscribeToAuth(onChange: (user: CloudUser | null) => void): () => void;
   signInWithEmail(credentials: AuthCredentials): Promise<void>;
   signUpWithEmail(credentials: AuthCredentials): Promise<void>;
-  signInWithGoogle(): Promise<void>;
+  signInWithGoogle(credentials: GoogleCredentials): Promise<void>;
   signOut(): Promise<void>;
   getUserProfile(uid: string): Promise<CloudUser | null>;
   subscribeToWorkspace(coupleId: string, onChange: (data: CloudWorkspaceData) => void, onError: (error: Error) => void): () => void;

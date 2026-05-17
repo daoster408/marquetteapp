@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
 import { useCycleStore } from '../store';
 import { COLORS, STRINGS } from '../constants';
+import { getGoogleAuthConfig } from '../services/cloudSync/firebase';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
   const {
@@ -10,7 +15,6 @@ export default function AuthScreen() {
     clearCloudError,
     googleSignInConfigured,
     signInWithEmail,
-    signInWithGoogle,
     signUpWithEmail,
   } = useCycleStore();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -40,7 +44,7 @@ export default function AuthScreen() {
         <Card.Content>
           <Text variant="headlineSmall" style={styles.title}>{STRINGS.appName}</Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
-            Sign in to use the shared dogfood workspace.
+            Sign in to use your shared family chart.
           </Text>
 
           {isSignUp && (
@@ -86,19 +90,17 @@ export default function AuthScreen() {
             {isSignUp ? 'Use Existing Account' : 'Create New Account'}
           </Button>
 
-          <Button
-            mode="outlined"
-            icon="google"
-            onPress={signInWithGoogle}
-            disabled={!googleSignInConfigured}
-            style={styles.button}
-          >
-            Continue with Google
-          </Button>
-          {!googleSignInConfigured && (
-            <HelperText type="info" visible>
-              Google sign-in is waiting on Firebase OAuth client IDs.
-            </HelperText>
+          {googleSignInConfigured ? (
+            <GoogleSignInButton disabled={isSubmitting} />
+          ) : (
+            <>
+              <Button mode="outlined" icon="google" disabled style={styles.button}>
+                Continue with Google
+              </Button>
+              <HelperText type="info" visible>
+                Google sign-in is waiting on Firebase OAuth client IDs.
+              </HelperText>
+            </>
           )}
 
           {!!cloudError && (
@@ -109,6 +111,66 @@ export default function AuthScreen() {
         </Card.Content>
       </Card>
     </View>
+  );
+}
+
+function GoogleSignInButton({ disabled }: { disabled: boolean }) {
+  const { clearCloudError, signInWithGoogle } = useCycleStore();
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const googleAuthConfig = getGoogleAuthConfig();
+  const [googleRequest, googleResponse, promptGoogleSignIn] = Google.useIdTokenAuthRequest({
+    androidClientId: googleAuthConfig.androidClientId || undefined,
+    webClientId: googleAuthConfig.webClientId || undefined,
+    selectAccount: true,
+  });
+
+  useEffect(() => {
+    if (!googleResponse) return;
+
+    if (googleResponse.type !== 'success') {
+      setIsGoogleSubmitting(false);
+      return;
+    }
+
+    const completeGoogleSignIn = async () => {
+      try {
+        await signInWithGoogle({
+          idToken: googleResponse.params.id_token,
+          accessToken: googleResponse.params.access_token,
+        });
+      } catch {
+      } finally {
+        setIsGoogleSubmitting(false);
+      }
+    };
+
+    completeGoogleSignIn();
+  }, [googleResponse, signInWithGoogle]);
+
+  const submitGoogle = async () => {
+    clearCloudError();
+    setIsGoogleSubmitting(true);
+    try {
+      const result = await promptGoogleSignIn();
+      if (result.type !== 'success') {
+        setIsGoogleSubmitting(false);
+      }
+    } catch {
+      setIsGoogleSubmitting(false);
+    }
+  };
+
+  return (
+    <Button
+      mode="outlined"
+      icon="google"
+      onPress={submitGoogle}
+      loading={isGoogleSubmitting}
+      disabled={disabled || !googleRequest || isGoogleSubmitting}
+      style={styles.button}
+    >
+      Continue with Google
+    </Button>
   );
 }
 

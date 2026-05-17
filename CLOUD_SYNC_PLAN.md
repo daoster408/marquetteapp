@@ -652,6 +652,7 @@ Implemented on branch `codex/cloud-sync-v1`.
   - Name: `Fidelis Dogfood`
   - Android package: `com.daoster.app.dogfood`
 - `eas.json` includes a `dogfood` profile using `APP_VARIANT=dogfood`, APK output, and the `dogfood` EAS channel.
+- `app.config.js` sets a dogfood native URL scheme of `com.daoster.app.dogfood` for OAuth redirects. This requires a new dogfood build before Google Sign-In can be tested on-device.
 - Verified with `npx expo config --json` and `APP_VARIANT=dogfood npx expo config --json`; the dogfood package does not replace `com.daoster.app`.
 
 ### Firebase Configuration
@@ -676,10 +677,13 @@ Manual Firebase Console setup still required:
 
 - Create/register a Firebase Android app for package `com.daoster.app.dogfood`.
 - Enable Firestore.
-- Enable Firebase Auth. Email/password is implemented for dogfood. Google sign-in UI is present but disabled until OAuth client IDs are supplied.
+- Enable Firebase Auth. Email/password is implemented for dogfood. Google Sign-In app code is implemented but the UI remains disabled until OAuth client IDs are supplied.
 - Before publishing the hardened dogfood rules, create Firestore allowlist documents for each approved tester. Prefer `dogfoodAllowedUsers/{firebase-auth-uid}` with `{ enabled: true }`; `dogfoodAllowedEmails/{exact-auth-email}` with `{ enabled: true }` is also supported. Include the owner and spouse.
 - Deploy `firestore.rules`.
-- Add SHA fingerprints required by Google sign-in for the EAS dogfood build.
+- Add SHA-1/SHA-256 fingerprints required by Google Sign-In for the EAS dogfood/Play signing path.
+- Enable the Google provider in Firebase Auth.
+- Create or locate the Android OAuth client for package `com.daoster.app.dogfood` and the Web OAuth client for the Firebase project.
+- Set `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the dogfood EAS environment, then rebuild dogfood so the native scheme and env config are present.
 
 ### Product Language
 
@@ -696,6 +700,8 @@ Preferred copy direction:
 ### Implemented App Behavior
 
 - Firebase Auth + Firestore repository layer added under `src/services/cloudSync`.
+- Firebase Auth is initialized with React Native AsyncStorage persistence instead of the default browser persistence path.
+- Google Sign-In is wired through `expo-auth-session` and Firebase `GoogleAuthProvider`, but remains config-gated until OAuth client IDs are available.
 - Zustand remains the screen-facing state layer.
 - Firestore becomes the source of truth after sign-in and workspace setup.
 - Shared settings sync only `conservativeMode` and `intention`; notification permission and reminder time remain local.
@@ -730,8 +736,8 @@ Rules deny by default and enforce:
 
 ### Known Limitations / Follow-Up
 
-- Google Sign-In is now a high-priority dogfood follow-up because email/password onboarding is too clunky for spouse sharing. Required setup: enable the Google provider in Firebase Auth, configure OAuth client IDs for the dogfood Android app, add the correct SHA-1/SHA-256 fingerprints for the EAS/Play signing path, and then wire the existing auth repository to a Firebase-compatible Google credential flow.
-- Auth persistence is a high-priority dogfood follow-up. The app appears to log users out too often, possibly because the Firebase JS SDK is not using durable React Native persistence or because OTA reloads expose that weakness. Investigate the current `getAuth()` behavior and switch to a supported Expo/Firebase persistence pattern if needed.
-- Replace user-facing "workspace" language with "family chart" while leaving backend collection names and repository concepts stable unless a later migration justifies renaming them.
+- Google Sign-In still requires Firebase Console/OAuth setup and a new dogfood build before device testing. The downloaded `google-services.json` did not include OAuth client entries.
+- Auth persistence now uses React Native AsyncStorage. Device-verify that sign-in survives app restarts and OTA reloads.
+- User-facing "workspace" copy has been replaced with "family chart"; backend collection names and repository concepts remain stable unless a later migration justifies renaming them.
 - Firestore rules tests were not run against the emulator in this pass. Exact next step: install/run Firebase Emulator Suite, then add `@firebase/rules-unit-testing` cases for owner/member/non-member allow/deny paths using `firestore.rules`.
 - Full E2EE, photo storage, instructor sharing, complex roles, server reminders, and remote push remain deferred.

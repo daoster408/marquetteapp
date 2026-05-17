@@ -33,7 +33,7 @@ export function canUploadMigration(
   if (cloudCycles.length > 0) {
     return {
       allowed: false,
-      reason: 'This workspace already has cloud cycle data. Export a backup before choosing a deliberate merge path.',
+      reason: 'This family chart already has cloud cycle data. Export a backup before choosing a deliberate merge path.',
     };
   }
 

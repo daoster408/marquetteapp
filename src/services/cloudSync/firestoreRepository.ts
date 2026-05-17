@@ -1,6 +1,8 @@
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   updateProfile,
@@ -32,7 +34,7 @@ import { toSharedSettings } from './migration';
 import { dayLogToFirestore } from './serialization';
 
 const DOGFOOD_ACCESS_ERROR =
-  'This dogfood build is limited to approved tester emails. Ask the workspace owner to add this email to the Firebase dogfood allowlist.';
+  'This dogfood build is limited to approved testers. Ask the family chart owner to add this account to the Firebase dogfood allowlist.';
 
 function timestampToIso(value: unknown): string | undefined {
   if (value instanceof Timestamp) {
@@ -225,8 +227,23 @@ export const firestoreCycleRepository: CloudRepository = {
     await ensureUserProfile(credential.user);
   },
 
-  async signInWithGoogle() {
-    throw new Error('Google sign-in needs Firebase Console OAuth client IDs before it can be enabled in this build.');
+  async signInWithGoogle({ idToken, accessToken }) {
+    if (!idToken && !accessToken) {
+      throw new Error('Google sign-in did not return a usable credential.');
+    }
+
+    const { auth } = getFirebaseServices();
+    const credential = GoogleAuthProvider.credential(idToken || undefined, accessToken || undefined);
+    const userCredential = await signInWithCredential(auth, credential);
+
+    try {
+      await assertDogfoodAccess(userCredential.user.email, userCredential.user.uid);
+    } catch (error) {
+      await firebaseSignOut(auth);
+      throw error;
+    }
+
+    await ensureUserProfile(userCredential.user);
   },
 
   async signOut() {
@@ -403,7 +420,7 @@ export const firestoreCycleRepository: CloudRepository = {
 
       const memberSnapshot = await transaction.get(memberRef);
       if (memberSnapshot.exists() && !memberSnapshot.data().removedAt) {
-        throw new Error('This account is already a member of the workspace.');
+        throw new Error('This account is already a member of the family chart.');
       }
 
       transaction.set(memberRef, {
@@ -433,7 +450,7 @@ export const firestoreCycleRepository: CloudRepository = {
 
   async removeMember(coupleId, owner, memberUid) {
     if (owner.uid === memberUid) {
-      throw new Error('Owners cannot remove themselves. Delete the workspace instead.');
+      throw new Error('Owners cannot remove themselves. Delete the family chart instead.');
     }
 
     const { db } = getFirebaseServices();

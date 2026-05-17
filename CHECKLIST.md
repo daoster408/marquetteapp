@@ -81,9 +81,11 @@
 - [x] Add Jest coverage for migration, role, and invite helpers
 - [x] Deploy dogfood Firestore rules and verify owner/spouse invite join on real devices
 - [ ] Run Firestore Security Rules tests in Firebase Emulator Suite
-- [ ] Configure Google Sign-In for dogfood Firebase/EAS builds
-- [ ] Investigate Firebase Auth persistence across app restarts and OTA updates
-- [ ] Rename user-facing "workspace" language to "family chart"
+- [x] Add Google Sign-In app/repository implementation behind OAuth config gate
+- [ ] Configure Google Sign-In OAuth client IDs/SHA fingerprints in Firebase/EAS
+- [x] Add React Native AsyncStorage-backed Firebase Auth persistence
+- [ ] Device-verify Firebase Auth persistence across app restarts and OTA updates
+- [x] Rename user-facing "workspace" language to "family chart"
 - [x] Fill Firebase Console values for dogfood project/app
 - [x] Device-test two-account/two-phone join and shared sync with exported backup in hand
 - [ ] Device-test explicit local-to-cloud migration on a fresh dogfood workspace
@@ -150,7 +152,7 @@
 
 *   **Beta Status:** Stabilization, backup, history, PDF export, and cycle data integrity fixes are merged to `main` and published to the `preview` OTA channel.
 *   **Cloud Dogfood Status:** Cloud sync v1 is implemented on `codex/cloud-sync-v1` for Android dogfood builds only. Stable `com.daoster.app` remains configured as the default package.
-*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Google sign-in still needs Firebase Console OAuth client IDs/SHA setup. Dogfood sign-in appears to lose sessions too often, possibly due to Firebase JS SDK persistence in React Native or OTA reload behavior.
+*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Google Sign-In still needs Firebase Console OAuth client IDs/SHA setup before the button enables. Auth persistence now uses React Native AsyncStorage and needs device verification through app restarts/OTA reloads.
 *   **Dogfood Access:** Hardened dogfood builds now require approved testers in Firestore `dogfoodAllowedUsers/{firebase-auth-uid}` or `dogfoodAllowedEmails/{exact-auth-email}` docs with `enabled: true`; `EXPO_PUBLIC_DOGFOOD_ALLOWED_EMAILS` can also be set as an extra client-side gate.
-*   **Dogfood Language:** Keep backend/data model names stable for now (`couples`, workspace-oriented repository names), but change user-facing copy from "workspace" to "family chart" in the next polish pass.
-*   **Next Priority:** Fix auth persistence, implement Android Google Sign-In, rename user-facing workspace copy to family chart, then add emulator rules tests for invite/owner/member paths.
+*   **Dogfood Language:** Backend/data model names stay stable for now (`couples`, workspace-oriented repository names); user-facing copy now says "family chart."
+*   **Next Priority:** Configure Google OAuth client IDs/SHA fingerprints, create a new dogfood build for the native redirect scheme, device-verify Google Sign-In and auth persistence, then add emulator rules tests for invite/owner/member paths.
