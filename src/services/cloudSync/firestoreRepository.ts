@@ -355,6 +355,10 @@ export const firestoreCycleRepository: CloudRepository = {
         usedBy: user.uid,
       });
       transaction.set(userRef, {
+        uid: user.uid,
+        displayName: user.displayName || null,
+        email: user.email || null,
+        photoURL: user.photoURL || null,
         activeCoupleId: parsed.coupleId,
         lastSignedInAt: serverTimestamp(),
       }, { merge: true });

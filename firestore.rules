@@ -93,7 +93,7 @@ service cloud.firestore {
           request.resource.data.role == resource.data.role &&
           request.resource.data.uid == resource.data.uid &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['removedAt']);
-        allow delete: if settingId == 'app' && owner(coupleId);
+        allow delete: if false;
       }
 
       match /inviteCodes/{codeId} {
