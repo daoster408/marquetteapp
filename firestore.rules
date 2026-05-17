@@ -108,7 +108,12 @@ service cloud.firestore {
       allow delete: if false;
 
       match /members/{uid} {
-        allow read: if activeMember(coupleId);
+        allow read: if activeMember(coupleId) ||
+          (
+            signedIn() &&
+            dogfoodAccessAllowed() &&
+            uid == request.auth.uid
+          );
         allow create: if signedIn() &&
           dogfoodAccessAllowed() &&
           uid == request.auth.uid &&
