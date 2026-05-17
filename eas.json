@@ -23,6 +23,18 @@
         "buildType": "apk"
       }
     },
+    "dogfoodPlay": {
+      "distribution": "store",
+      "channel": "dogfood",
+      "environment": "preview",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "dogfood"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "channel": "production"
