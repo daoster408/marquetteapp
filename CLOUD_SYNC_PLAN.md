@@ -686,6 +686,47 @@ Manual Firebase Console setup still required:
 - Create or locate the Android OAuth client for package `com.daoster.app.dogfood` and the Web OAuth client for the Firebase project.
 - Set `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the dogfood EAS environment, then rebuild dogfood so the native scheme and env config are present.
 
+Current dogfood Firebase Android app:
+
+```text
+Firebase project: fidelis-dogfood
+Firebase Android app id: 1:1054762540951:android:e70c43a2b8f9cb852b2ed2
+Android package: com.daoster.app.dogfood
+```
+
+Google OAuth setup checklist:
+
+1. In Google Play Console, open the `com.daoster.app.dogfood` app and copy the App signing certificate SHA-1 and SHA-256 fingerprints.
+2. Add those fingerprints to the Firebase Android app. CLI form:
+
+   ```sh
+   npx firebase-tools -P fidelis-dogfood apps:android:sha:create 1:1054762540951:android:e70c43a2b8f9cb852b2ed2 <SHA_FINGERPRINT>
+   ```
+
+   Run it once for SHA-1 and once for SHA-256. EAS upload-key fingerprints can also be added for direct APK/AAB testing, but Play-installed builds need the Play App signing certificate.
+3. In Firebase Console > Authentication > Sign-in method, enable Google.
+4. In Google Cloud Console > APIs & Services > Credentials, confirm an Android OAuth client exists for package `com.daoster.app.dogfood` using the Play SHA-1. Also confirm a Web OAuth client exists for the same project.
+5. Set the two EAS preview environment variables:
+
+   ```sh
+   npx eas-cli env:create preview --name EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID --value <ANDROID_OAUTH_CLIENT_ID> --visibility plaintext --non-interactive
+   npx eas-cli env:create preview --name EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID --value <WEB_OAUTH_CLIENT_ID> --visibility plaintext --non-interactive
+   ```
+
+6. Verify before building/updating:
+
+   ```sh
+   npx eas-cli env:list --environment preview
+   npx firebase-tools apps:sdkconfig ANDROID 1:1054762540951:android:e70c43a2b8f9cb852b2ed2 --project fidelis-dogfood --json
+   ```
+
+   The Firebase Android config should show at least one `oauth_client` entry after the SHA/OAuth setup propagates.
+7. Create a fresh dogfood Play build because App Lock uses `expo-local-authentication` and Google Sign-In needs the native dogfood redirect scheme:
+
+   ```sh
+   npx eas-cli build --profile dogfoodPlay --platform android --non-interactive
+   ```
+
 ### Product Language
 
 Use "family chart" in user-facing copy instead of "workspace." "Workspace" remains acceptable in backend/data-access code and this technical plan when referring to the Firestore authorization container. The UI should feel like a shared chart for a married couple, not a work collaboration tool.
