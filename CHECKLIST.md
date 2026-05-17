@@ -72,6 +72,7 @@
 - [x] Add signed-out, workspace setup, invite join, and migration prompt screens
 - [x] Add owner/member role helpers and UI controls
 - [x] Add one-time invite code creation/join flow with hashed invite records
+- [x] Add dogfood tester allowlist gate for Firebase Auth/Firestore writes
 - [x] Sync cycles and shared app settings through Firestore after workspace setup
 - [x] Keep notification permission/reminder time local per device
 - [x] Update reminder copy to neutral text only
@@ -145,4 +146,5 @@
 *   **Beta Status:** Stabilization, backup, history, PDF export, and cycle data integrity fixes are merged to `main` and published to the `preview` OTA channel.
 *   **Cloud Dogfood Status:** Cloud sync v1 is implemented on `codex/cloud-sync-v1` for Android dogfood builds only. Stable `com.daoster.app` remains configured as the default package.
 *   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Google sign-in still needs Firebase Console OAuth client IDs.
-*   **Next Priority:** Configure Firebase dogfood project values, deploy Firestore rules, run emulator rules tests, then device-test two-account sync with `eas build --profile dogfood --platform android`.
+*   **Dogfood Access:** Hardened dogfood builds now require approved testers in Firestore `dogfoodAllowedUsers/{firebase-auth-uid}` or `dogfoodAllowedEmails/{exact-auth-email}` docs with `enabled: true`; `EXPO_PUBLIC_DOGFOOD_ALLOWED_EMAILS` can also be set as an extra client-side gate.
+*   **Next Priority:** Add owner/spouse allowlist docs, deploy the latest Firestore rules, publish a dogfood OTA update, run emulator rules tests, then device-test two-account sync with a fresh invite code.

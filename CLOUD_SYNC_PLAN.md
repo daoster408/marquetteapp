@@ -667,13 +667,17 @@ EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 EXPO_PUBLIC_FIREBASE_APP_ID
 EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+EXPO_PUBLIC_DOGFOOD_ALLOWED_EMAILS
 ```
+
+`EXPO_PUBLIC_DOGFOOD_ALLOWED_EMAILS` is an optional comma-separated belt-and-suspenders client-side dogfood allowlist. Firestore remains the server-side enforcement layer and always requires either `dogfoodAllowedEmails` or `dogfoodAllowedUsers` docs.
 
 Manual Firebase Console setup still required:
 
 - Create/register a Firebase Android app for package `com.daoster.app.dogfood`.
 - Enable Firestore.
 - Enable Firebase Auth. Email/password is implemented for dogfood. Google sign-in UI is present but disabled until OAuth client IDs are supplied.
+- Before publishing the hardened dogfood rules, create Firestore allowlist documents for each approved tester. Prefer `dogfoodAllowedUsers/{firebase-auth-uid}` with `{ enabled: true }`; `dogfoodAllowedEmails/{exact-auth-email}` with `{ enabled: true }` is also supported. Include the owner and spouse.
 - Deploy `firestore.rules`.
 - Add SHA fingerprints required by Google sign-in for the EAS dogfood build.
 
@@ -708,6 +712,7 @@ Rules deny by default and enforce:
 - Member role cannot be changed through member updates.
 - Join flow can create only the joining user's `member` record as `member`, tied to a same-batch invite-code use.
 - User profile documents are restricted to non-health account metadata fields.
+- New dogfood user/profile/workspace/member writes require `dogfoodAllowedUsers/{request.auth.uid}` or `dogfoodAllowedEmails/{request.auth.token.email}` with `enabled: true`, so Play crawlers or leaked builds cannot create usable cloud workspaces or join invites unless explicitly allowlisted.
 
 ### Known Limitations / Follow-Up
 

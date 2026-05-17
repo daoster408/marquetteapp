@@ -24,11 +24,15 @@ import {
 } from 'firebase/firestore';
 import { AppSettings, CloudUser, CloudWorkspaceData, CoupleMember, CoupleWorkspace, Cycle, MigrationSnapshot, SharedAppSettings } from '../../types';
 import { normalizeCycleData } from '../../utils/cycleData';
+import { isEmailInDogfoodAllowlist, normalizeDogfoodAccessEmail } from './access';
 import { createInviteCode as createRawInviteCode, hashInviteSecret, parseInviteCode } from './inviteCodes';
-import { getFirebaseServices, isFirebaseConfigured, isGoogleConfigured } from './firebase';
+import { getDogfoodAllowedEmails, getFirebaseServices, isDogfoodBuild, isFirebaseConfigured, isGoogleConfigured } from './firebase';
 import { AuthCredentials, CloudRepository } from './repository';
 import { toSharedSettings } from './migration';
 import { dayLogToFirestore } from './serialization';
+
+const DOGFOOD_ACCESS_ERROR =
+  'This dogfood build is limited to approved tester emails. Ask the workspace owner to add this email to the Firebase dogfood allowlist.';
 
 function timestampToIso(value: unknown): string | undefined {
   if (value instanceof Timestamp) {
@@ -101,6 +105,42 @@ function cycleToFirestore(cycle: Cycle, uid: string) {
   };
 }
 
+async function assertDogfoodAccess(email?: string | null, uid?: string | null): Promise<void> {
+  if (!isDogfoodBuild()) return;
+
+  const normalizedEmail = normalizeDogfoodAccessEmail(email);
+  if (!normalizedEmail) {
+    throw new Error(DOGFOOD_ACCESS_ERROR);
+  }
+
+  const configuredEmails = getDogfoodAllowedEmails();
+  if (configuredEmails.length > 0 && !isEmailInDogfoodAllowlist(normalizedEmail, configuredEmails)) {
+    throw new Error(DOGFOOD_ACCESS_ERROR);
+  }
+
+  const { db } = getFirebaseServices();
+  if (uid) {
+    const uidAccessSnapshot = await getDoc(doc(db, 'dogfoodAllowedUsers', uid));
+    if (uidAccessSnapshot.exists() && uidAccessSnapshot.data().enabled !== false) {
+      return;
+    }
+  }
+
+  const accessSnapshot = await getDoc(doc(db, 'dogfoodAllowedEmails', normalizedEmail));
+  if (!accessSnapshot.exists() || accessSnapshot.data().enabled === false) {
+    throw new Error(DOGFOOD_ACCESS_ERROR);
+  }
+}
+
+function assertConfiguredDogfoodAccess(email?: string | null): void {
+  if (!isDogfoodBuild()) return;
+
+  const configuredEmails = getDogfoodAllowedEmails();
+  if (configuredEmails.length > 0 && !isEmailInDogfoodAllowlist(email, configuredEmails)) {
+    throw new Error(DOGFOOD_ACCESS_ERROR);
+  }
+}
+
 async function ensureUserProfile(user: User): Promise<CloudUser> {
   const { db } = getFirebaseServices();
   const userRef = doc(db, 'users', user.uid);
@@ -142,6 +182,14 @@ export const firestoreCycleRepository: CloudRepository = {
         return;
       }
 
+      try {
+        await assertDogfoodAccess(user.email, user.uid);
+      } catch {
+        await firebaseSignOut(auth);
+        onChange(null);
+        return;
+      }
+
       const profile = await ensureUserProfile(user);
       onChange(profile);
     });
@@ -149,12 +197,28 @@ export const firestoreCycleRepository: CloudRepository = {
 
   async signInWithEmail({ email, password }) {
     const { auth } = getFirebaseServices();
-    await signInWithEmailAndPassword(auth, email.trim(), password);
+    const normalizedEmail = normalizeDogfoodAccessEmail(email);
+    assertConfiguredDogfoodAccess(normalizedEmail);
+    const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    try {
+      await assertDogfoodAccess(credential.user.email, credential.user.uid);
+    } catch (error) {
+      await firebaseSignOut(auth);
+      throw error;
+    }
   },
 
   async signUpWithEmail({ email, password, displayName }) {
     const { auth } = getFirebaseServices();
-    const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    const normalizedEmail = normalizeDogfoodAccessEmail(email);
+    assertConfiguredDogfoodAccess(normalizedEmail);
+    const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+    try {
+      await assertDogfoodAccess(credential.user.email, credential.user.uid);
+    } catch (error) {
+      await firebaseSignOut(auth);
+      throw error;
+    }
     if (displayName?.trim()) {
       await updateProfile(credential.user, { displayName: displayName.trim() });
     }

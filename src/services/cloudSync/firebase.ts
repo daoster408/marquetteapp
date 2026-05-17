@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
+import { parseDogfoodAllowedEmails } from './access';
 
 interface FirebaseExtraConfig {
   apiKey?: string;
@@ -12,6 +13,7 @@ interface FirebaseExtraConfig {
   appId?: string;
   androidClientId?: string;
   webClientId?: string;
+  dogfoodAllowedEmails?: string;
 }
 
 function getExtraConfig(): FirebaseExtraConfig {
@@ -39,6 +41,14 @@ export function isFirebaseConfigured(): boolean {
 export function isGoogleConfigured(): boolean {
   const extra = getExtraConfig();
   return Boolean(extra.androidClientId && extra.webClientId);
+}
+
+export function isDogfoodBuild(): boolean {
+  return Constants.expoConfig?.extra?.appVariant === 'dogfood';
+}
+
+export function getDogfoodAllowedEmails(): string[] {
+  return parseDogfoodAllowedEmails(getExtraConfig().dogfoodAllowedEmails);
 }
 
 let appInstance: FirebaseApp | null = null;

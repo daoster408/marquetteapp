@@ -22,6 +22,29 @@ service cloud.firestore {
       return /databases/$(database)/documents/couples/$(coupleId)/inviteCodes/$(codeId);
     }
 
+    function dogfoodAccessPath(email) {
+      return /databases/$(database)/documents/dogfoodAllowedEmails/$(email);
+    }
+
+    function dogfoodUserAccessPath(uid) {
+      return /databases/$(database)/documents/dogfoodAllowedUsers/$(uid);
+    }
+
+    function dogfoodAccessAllowed() {
+      return signedIn() &&
+        (
+          (
+            request.auth.token.email is string &&
+            exists(dogfoodAccessPath(request.auth.token.email)) &&
+            get(dogfoodAccessPath(request.auth.token.email)).data.enabled == true
+          ) ||
+          (
+            exists(dogfoodUserAccessPath(request.auth.uid)) &&
+            get(dogfoodUserAccessPath(request.auth.uid)).data.enabled == true
+          )
+        );
+    }
+
     function coupleActive(coupleId) {
       return exists(couplePath(coupleId)) &&
         get(couplePath(coupleId)).data.deletedAt == null;
@@ -54,15 +77,27 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if signedIn() && uid == request.auth.uid;
       allow create, update: if signedIn() &&
+        dogfoodAccessAllowed() &&
         uid == request.auth.uid &&
         request.resource.data.uid == request.auth.uid &&
         userProfileKeysOnly();
       allow delete: if false;
     }
 
+    match /dogfoodAllowedEmails/{email} {
+      allow get: if signedIn() && request.auth.token.email == email;
+      allow list, create, update, delete: if false;
+    }
+
+    match /dogfoodAllowedUsers/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
     match /couples/{coupleId} {
       allow read: if activeMember(coupleId);
       allow create: if signedIn() &&
+        dogfoodAccessAllowed() &&
         request.resource.data.createdBy == request.auth.uid &&
         request.resource.data.deletedAt == null;
       allow update: if activeMember(coupleId) &&
@@ -75,6 +110,7 @@ service cloud.firestore {
       match /members/{uid} {
         allow read: if activeMember(coupleId);
         allow create: if signedIn() &&
+          dogfoodAccessAllowed() &&
           uid == request.auth.uid &&
           request.resource.data.uid == request.auth.uid &&
           (
@@ -97,7 +133,7 @@ service cloud.firestore {
       }
 
       match /inviteCodes/{codeId} {
-        allow read: if signedIn();
+        allow read: if activeMember(coupleId) || dogfoodAccessAllowed();
         allow create: if owner(coupleId) &&
           request.resource.data.keys().hasOnly([
             'codeHash',
@@ -114,6 +150,7 @@ service cloud.firestore {
           owner(coupleId) ||
           (
             signedIn() &&
+            dogfoodAccessAllowed() &&
             resource.data.usedAt == null &&
             resource.data.usedBy == null &&
             request.time < resource.data.expiresAt &&

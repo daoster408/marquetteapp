@@ -1,4 +1,5 @@
 import { createMigrationSnapshot, canUploadMigration, toSharedSettings } from '../services/cloudSync/migration';
+import { isEmailInDogfoodAllowlist, normalizeDogfoodAccessEmail, parseDogfoodAllowedEmails } from '../services/cloudSync/access';
 import { formatInviteCode, hashInviteSecret, parseInviteCode } from '../services/cloudSync/inviteCodes';
 import { getActiveMember, isOwner } from '../services/cloudSync/repository';
 import { dayLogToFirestore } from '../services/cloudSync/serialization';
@@ -86,6 +87,24 @@ describe('cloud sync invite codes', () => {
     await expect(hashInviteSecret('couple-1', 'SECRET')).resolves.toBe(
       await hashInviteSecret('couple-1', 'secret')
     );
+  });
+});
+
+describe('cloud sync dogfood access', () => {
+  it('normalizes tester emails for auth and allowlist checks', () => {
+    expect(normalizeDogfoodAccessEmail('  Brian.Dao1@GMAIL.com  ')).toBe('brian.dao1@gmail.com');
+  });
+
+  it('parses comma-separated dogfood allowlists without duplicates', () => {
+    expect(parseDogfoodAllowedEmails('one@example.com, TWO@example.com,one@example.com')).toEqual([
+      'one@example.com',
+      'two@example.com',
+    ]);
+  });
+
+  it('checks allowlisted emails case-insensitively', () => {
+    expect(isEmailInDogfoodAllowlist('TWO@example.com', ['one@example.com', 'two@example.com'])).toBe(true);
+    expect(isEmailInDogfoodAllowlist('crawlerrobo@gmail.com', ['one@example.com'])).toBe(false);
   });
 });
 
