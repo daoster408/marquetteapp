@@ -226,7 +226,7 @@ export const useCycleStore = create<CycleState>()(
             cloudConfigured,
             googleSignInConfigured,
             pendingLocalMigration: migrationSnapshot,
-            cloudMode: cloudConfigured ? 'signed-out' : 'local',
+            cloudMode: cloudConfigured ? 'restoring-auth' : 'local',
           });
 
           if (!cloudConfigured || authUnsubscribe) return;

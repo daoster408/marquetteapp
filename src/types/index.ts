@@ -80,7 +80,7 @@ export interface CloudWorkspaceData {
   members: CoupleMember[];
 }
 
-export type CloudMode = 'local' | 'signed-out' | 'workspace-required' | 'syncing' | 'ready' | 'error';
+export type CloudMode = 'local' | 'restoring-auth' | 'signed-out' | 'workspace-required' | 'syncing' | 'ready' | 'error';
 
 export interface MigrationSnapshot {
   cycles: Cycle[];

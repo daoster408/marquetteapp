@@ -176,7 +176,7 @@ export default function App() {
         <AppErrorBoundary>
           {cloudMode === 'signed-out' && <AuthScreen />}
           {cloudMode === 'workspace-required' && <WorkspaceScreen />}
-          {cloudMode === 'syncing' && <LoadingScreen />}
+          {(cloudMode === 'restoring-auth' || cloudMode === 'syncing') && <LoadingScreen />}
           {shouldShowMigration && <MigrationScreen />}
           {(cloudMode === 'local' || (cloudMode === 'ready' && !shouldShowMigration) || cloudMode === 'error') && (
             <NavigationContainer>
