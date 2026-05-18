@@ -205,6 +205,14 @@ function withTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 20000)
 
 function getGoogleErrorMessage(error: unknown): string {
   if (isErrorWithCode(error)) {
+    if (error.code === 'auth/account-exists-with-different-credential') {
+      return 'That Google email already has a password account. Sign in with email/password for now; Google account linking still needs one more app update.';
+    }
+
+    if (error.code === 'auth/invalid-credential') {
+      return 'Google sign-in returned an invalid Firebase credential. Try again after reopening the app.';
+    }
+
     if (error.code === 'DEVELOPER_ERROR') {
       return 'Google sign-in is not configured correctly for this build. Check the Play signing SHA and OAuth client.';
     }

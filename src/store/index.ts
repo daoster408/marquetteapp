@@ -59,7 +59,7 @@ function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const code = (error as { code?: string }).code;
     if (code === 'auth/account-exists-with-different-credential') {
-      return 'That Google email already has a password account. Sign in with email/password once so we can link Google safely.';
+      return 'That Google email already has a password account. Sign in with email/password for now; Google account linking still needs one more app update.';
     }
     if (code === 'auth/invalid-credential') {
       return 'Google sign-in returned an invalid credential for Firebase. Try again after reopening the app.';
