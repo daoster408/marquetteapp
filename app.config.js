@@ -22,7 +22,6 @@ module.exports = ({ config }) => ({
   },
   plugins: [
     ...(config.plugins || []),
-    'expo-web-browser',
     [
       'expo-local-authentication',
       {

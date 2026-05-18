@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  isCancelledResponse,
+  isSuccessResponse,
+} from '@react-native-google-signin/google-signin';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
 import { useCycleStore } from '../store';
 import { COLORS, STRINGS } from '../constants';
 import { getGoogleAuthConfig } from '../services/cloudSync/firebase';
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
   const {
@@ -91,7 +92,7 @@ export default function AuthScreen() {
           </Button>
 
           {googleSignInConfigured ? (
-            <GoogleSignInButton disabled={isSubmitting} loginHint={email.trim()} />
+            <GoogleSignInButton disabled={isSubmitting} />
           ) : (
             <>
               <Button mode="outlined" icon="google" disabled style={styles.button}>
@@ -114,55 +115,42 @@ export default function AuthScreen() {
   );
 }
 
-function GoogleSignInButton({
-  disabled,
-  loginHint,
-}: {
-  disabled: boolean;
-  loginHint?: string;
-}) {
+function GoogleSignInButton({ disabled }: { disabled: boolean }) {
   const { clearCloudError, signInWithGoogle } = useCycleStore();
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const googleAuthConfig = getGoogleAuthConfig();
-  const [googleRequest, googleResponse, promptGoogleSignIn] = Google.useIdTokenAuthRequest({
-    androidClientId: googleAuthConfig.androidClientId || undefined,
-    webClientId: googleAuthConfig.webClientId || undefined,
-    loginHint: loginHint || undefined,
-    selectAccount: true,
-  });
 
   useEffect(() => {
-    if (!googleResponse) return;
-
-    if (googleResponse.type !== 'success') {
-      setIsGoogleSubmitting(false);
-      return;
-    }
-
-    const completeGoogleSignIn = async () => {
-      try {
-        await signInWithGoogle({
-          idToken: googleResponse.params.id_token,
-          accessToken: googleResponse.params.access_token,
-        });
-      } catch {
-      } finally {
-        setIsGoogleSubmitting(false);
-      }
-    };
-
-    completeGoogleSignIn();
-  }, [googleResponse, signInWithGoogle]);
+    GoogleSignin.configure({
+      webClientId: googleAuthConfig.webClientId || undefined,
+      scopes: ['profile', 'email'],
+    });
+  }, [googleAuthConfig.webClientId]);
 
   const submitGoogle = async () => {
     clearCloudError();
     setIsGoogleSubmitting(true);
     try {
-      const result = await promptGoogleSignIn();
-      if (result.type !== 'success') {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.signOut().catch(() => undefined);
+
+      const result = await GoogleSignin.signIn();
+      if (isCancelledResponse(result)) {
         setIsGoogleSubmitting(false);
+        return;
       }
+
+      if (!isSuccessResponse(result)) {
+        throw new Error('Google sign-in did not return an account.');
+      }
+
+      const tokens = await GoogleSignin.getTokens();
+      await signInWithGoogle({
+        idToken: result.data.idToken || tokens.idToken,
+        accessToken: tokens.accessToken,
+      });
     } catch {
+      // Store-level signInWithGoogle failures are surfaced through cloudError.
       setIsGoogleSubmitting(false);
     }
   };
@@ -173,7 +161,7 @@ function GoogleSignInButton({
       icon="google"
       onPress={submitGoogle}
       loading={isGoogleSubmitting}
-      disabled={disabled || !googleRequest || isGoogleSubmitting}
+      disabled={disabled || isGoogleSubmitting}
       style={styles.button}
     >
       Continue with Google

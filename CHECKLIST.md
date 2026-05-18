@@ -82,7 +82,7 @@
 - [x] Deploy dogfood Firestore rules and verify owner/spouse invite join on real devices
 - [ ] Run Firestore Security Rules tests in Firebase Emulator Suite
 - [x] Add Google Sign-In app/repository implementation behind OAuth config gate
-- [ ] Configure Google Sign-In OAuth client IDs/SHA fingerprints in Firebase/EAS
+- [x] Configure Google Sign-In OAuth client IDs/SHA fingerprints in Firebase/EAS
 - [x] Add React Native AsyncStorage-backed Firebase Auth persistence
 - [ ] Device-verify Firebase Auth persistence across app restarts and OTA updates
 - [x] Rename user-facing "workspace" language to "family chart"
@@ -154,8 +154,8 @@
 
 *   **Beta Status:** Stabilization, backup, history, PDF export, and cycle data integrity fixes are merged to `main` and published to the `preview` OTA channel.
 *   **Cloud Dogfood Status:** Cloud sync v1 is implemented on `codex/cloud-sync-v1` for Android dogfood builds only. Stable `com.daoster.app` remains configured as the default package.
-*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Google Sign-In still needs Firebase Console OAuth client IDs/SHA setup before the button enables. Auth persistence now uses React Native AsyncStorage and needs device verification through app restarts/OTA reloads. App lock uses a native Expo module, so it needs a new dogfood build and should not be shipped by OTA alone.
+*   **Known Issues:** Adaptive icon might be slightly cropped on some Androids (Todo). Raw CSV import is developer-oriented; JSON backup is the reliable restore path. Auth persistence now uses React Native AsyncStorage and needs device verification through app restarts/OTA reloads. App lock and native Google Sign-In use native modules, so they need a new dogfood build and should not be shipped by OTA alone.
 *   **Dogfood Access:** Hardened dogfood builds now require approved testers in Firestore `dogfoodAllowedUsers/{firebase-auth-uid}` or `dogfoodAllowedEmails/{exact-auth-email}` docs with `enabled: true`; `EXPO_PUBLIC_DOGFOOD_ALLOWED_EMAILS` can also be set as an extra client-side gate.
 *   **Dogfood Language:** Backend/data model names stay stable for now (`couples`, workspace-oriented repository names); user-facing copy now says "family chart."
-*   **Google OAuth Setup:** Use Firebase project `fidelis-dogfood`, Android app id `1:1054762540951:android:e70c43a2b8f9cb852b2ed2`, and package `com.daoster.app.dogfood`. Add the Play App signing SHA-1/SHA-256 fingerprints, enable Google Auth, then set `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the EAS `preview` environment.
-*   **Next Priority:** Create a new dogfood Play build for the native redirect scheme and app-lock module, device-verify Google Sign-In/app lock/auth persistence, then add emulator rules tests for invite/owner/member paths.
+*   **Google OAuth Setup:** Firebase project `fidelis-dogfood`, Android app id `1:1054762540951:android:e70c43a2b8f9cb852b2ed2`, and package `com.daoster.app.dogfood` have Play App signing SHA-1/SHA-256 fingerprints, Google Auth, and EAS `preview` Google client IDs configured.
+*   **Next Priority:** Create a new dogfood Play build for native Google Sign-In and the app-lock module, device-verify Google Sign-In/app lock/auth persistence, then add emulator rules tests for invite/owner/member paths.

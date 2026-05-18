@@ -652,7 +652,7 @@ Implemented on branch `codex/cloud-sync-v1`.
   - Name: `Fidelis Dogfood`
   - Android package: `com.daoster.app.dogfood`
 - `eas.json` includes a `dogfood` profile using `APP_VARIANT=dogfood`, APK output, and the `dogfood` EAS channel.
-- `app.config.js` sets a dogfood native URL scheme of `com.daoster.app.dogfood` for OAuth redirects. This requires a new dogfood build before Google Sign-In can be tested on-device.
+- `app.config.js` sets a dogfood native URL scheme of `com.daoster.app.dogfood`.
 - `expo-local-authentication` is included for optional device biometric/passcode app lock. This is a native module and requires a new dogfood build; do not rely on OTA alone for this feature.
 - Verified with `npx expo config --json` and `APP_VARIANT=dogfood npx expo config --json`; the dogfood package does not replace `com.daoster.app`.
 
@@ -721,7 +721,7 @@ Google OAuth setup checklist:
    ```
 
    The Firebase Android config should show at least one `oauth_client` entry after the SHA/OAuth setup propagates.
-7. Create a fresh dogfood Play build because App Lock uses `expo-local-authentication` and Google Sign-In needs the native dogfood redirect scheme:
+7. Create a fresh dogfood Play build because App Lock and native Google Sign-In add native modules:
 
    ```sh
    npx eas-cli build --profile dogfoodPlay --platform android --non-interactive
@@ -743,7 +743,7 @@ Preferred copy direction:
 
 - Firebase Auth + Firestore repository layer added under `src/services/cloudSync`.
 - Firebase Auth is initialized with React Native AsyncStorage persistence instead of the default browser persistence path.
-- Google Sign-In is wired through `expo-auth-session` and Firebase `GoogleAuthProvider`, but remains config-gated until OAuth client IDs are available.
+- Google Sign-In is wired through native `@react-native-google-signin/google-signin` and Firebase `GoogleAuthProvider`, and remains config-gated until OAuth client IDs are available.
 - Optional App Lock is available in Settings > Privacy. It uses the device lock screen, fingerprint, or face unlock before showing local/cloud chart screens. The setting is local to each device and is not written to Firestore shared settings.
 - Zustand remains the screen-facing state layer.
 - Firestore becomes the source of truth after sign-in and workspace setup.
@@ -779,8 +779,8 @@ Rules deny by default and enforce:
 
 ### Known Limitations / Follow-Up
 
-- Google Sign-In still requires Firebase Console/OAuth setup and a new dogfood build before device testing. The downloaded `google-services.json` did not include OAuth client entries.
-- App Lock requires a fresh dogfood build containing `expo-local-authentication`; existing Play/APK installs cannot receive this native module by OTA alone.
+- Google Sign-In Firebase Console/OAuth setup is configured. Native Google Sign-In still requires a new dogfood build before device testing because the previous Play build used browser-based OAuth.
+- App Lock and native Google Sign-In require a fresh dogfood build containing `expo-local-authentication` and `@react-native-google-signin/google-signin`; existing Play/APK installs cannot receive these native modules by OTA alone.
 - Auth persistence now uses React Native AsyncStorage. Device-verify that sign-in survives app restarts and OTA reloads.
 - User-facing "workspace" copy has been replaced with "family chart"; backend collection names and repository concepts remain stable unless a later migration justifies renaming them.
 - Firestore rules tests were not run against the emulator in this pass. Exact next step: install/run Firebase Emulator Suite, then add `@firebase/rules-unit-testing` cases for owner/member/non-member allow/deny paths using `firestore.rules`.
