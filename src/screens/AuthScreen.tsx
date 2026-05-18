@@ -91,7 +91,7 @@ export default function AuthScreen() {
           </Button>
 
           {googleSignInConfigured ? (
-            <GoogleSignInButton disabled={isSubmitting} />
+            <GoogleSignInButton disabled={isSubmitting} loginHint={email.trim()} />
           ) : (
             <>
               <Button mode="outlined" icon="google" disabled style={styles.button}>
@@ -114,13 +114,20 @@ export default function AuthScreen() {
   );
 }
 
-function GoogleSignInButton({ disabled }: { disabled: boolean }) {
+function GoogleSignInButton({
+  disabled,
+  loginHint,
+}: {
+  disabled: boolean;
+  loginHint?: string;
+}) {
   const { clearCloudError, signInWithGoogle } = useCycleStore();
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const googleAuthConfig = getGoogleAuthConfig();
   const [googleRequest, googleResponse, promptGoogleSignIn] = Google.useIdTokenAuthRequest({
     androidClientId: googleAuthConfig.androidClientId || undefined,
     webClientId: googleAuthConfig.webClientId || undefined,
+    loginHint: loginHint || undefined,
     selectAccount: true,
   });
 
