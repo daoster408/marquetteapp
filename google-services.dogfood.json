@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1054762540951",
+    "project_id": "fidelis-dogfood",
+    "storage_bucket": "fidelis-dogfood.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1054762540951:android:e70c43a2b8f9cb852b2ed2",
+        "android_client_info": {
+          "package_name": "com.daoster.app.dogfood"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1054762540951-uaiu30k3hqcfl3c9oluqjmu233opajim.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.daoster.app.dogfood",
+            "certificate_hash": "801f3fe379d40eaf85931ff172578468eefb03bd"
+          }
+        },
+        {
+          "client_id": "1054762540951-2pga0cjekralf9a130dh3dve4buqfv7g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_A-W3fjbsvjHQR8WUqJJjnI3BqUNMmRk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1054762540951-2pga0cjekralf9a130dh3dve4buqfv7g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
