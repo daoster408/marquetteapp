@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   GoogleSignin,
   isCancelledResponse,
+  isErrorWithCode,
   isSuccessResponse,
 } from '@react-native-google-signin/google-signin';
 import { StyleSheet, View } from 'react-native';
@@ -118,6 +119,7 @@ export default function AuthScreen() {
 function GoogleSignInButton({ disabled }: { disabled: boolean }) {
   const { clearCloudError, signInWithGoogle } = useCycleStore();
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const googleAuthConfig = getGoogleAuthConfig();
 
   useEffect(() => {
@@ -129,12 +131,19 @@ function GoogleSignInButton({ disabled }: { disabled: boolean }) {
 
   const submitGoogle = async () => {
     clearCloudError();
+    setGoogleError(null);
     setIsGoogleSubmitting(true);
     try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await withTimeout(
+        GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true }),
+        'Google Play Services did not respond. Try again after reopening the app.'
+      );
       await GoogleSignin.signOut().catch(() => undefined);
 
-      const result = await GoogleSignin.signIn();
+      const result = await withTimeout(
+        GoogleSignin.signIn(),
+        'Google account selection did not finish. Try again after reopening the app.'
+      );
       if (isCancelledResponse(result)) {
         setIsGoogleSubmitting(false);
         return;
@@ -144,29 +153,66 @@ function GoogleSignInButton({ disabled }: { disabled: boolean }) {
         throw new Error('Google sign-in did not return an account.');
       }
 
-      const tokens = await GoogleSignin.getTokens();
-      await signInWithGoogle({
-        idToken: result.data.idToken || tokens.idToken,
-        accessToken: tokens.accessToken,
-      });
-    } catch {
-      // Store-level signInWithGoogle failures are surfaced through cloudError.
+      const tokens = await withTimeout(
+        GoogleSignin.getTokens(),
+        'Google tokens did not arrive. Try again after reopening the app.'
+      );
+      await withTimeout(
+        signInWithGoogle({
+          idToken: result.data.idToken || tokens.idToken,
+          accessToken: tokens.accessToken,
+        }),
+        'Firebase sign-in did not finish. Try again after reopening the app.'
+      );
+    } catch (error) {
+      setGoogleError(getGoogleErrorMessage(error));
+    } finally {
       setIsGoogleSubmitting(false);
     }
   };
 
   return (
-    <Button
-      mode="outlined"
-      icon="google"
-      onPress={submitGoogle}
-      loading={isGoogleSubmitting}
-      disabled={disabled || isGoogleSubmitting}
-      style={styles.button}
-    >
-      Continue with Google
-    </Button>
+    <>
+      <Button
+        mode="outlined"
+        icon="google"
+        onPress={submitGoogle}
+        loading={isGoogleSubmitting}
+        disabled={disabled || isGoogleSubmitting}
+        style={styles.button}
+      >
+        Continue with Google
+      </Button>
+      {!!googleError && (
+        <HelperText type="error" visible>
+          {googleError}
+        </HelperText>
+      )}
+    </>
   );
+}
+
+function withTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 20000): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
+
+function getGoogleErrorMessage(error: unknown): string {
+  if (isErrorWithCode(error)) {
+    if (error.code === 'DEVELOPER_ERROR') {
+      return 'Google sign-in is not configured correctly for this build. Check the Play signing SHA and OAuth client.';
+    }
+
+    return `Google sign-in failed (${error.code}). Try again after reopening the app.`;
+  }
+
+  return error instanceof Error ? error.message : 'Google sign-in failed. Try again after reopening the app.';
 }
 
 const styles = StyleSheet.create({

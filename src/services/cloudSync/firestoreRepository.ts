@@ -264,19 +264,32 @@ export const firestoreCycleRepository: CloudRepository = {
     let cycles: Cycle[] = [];
     let settings: SharedAppSettings = { conservativeMode: false, intention: 'TTA' };
     let members: CoupleMember[] = [];
+    let hasCoupleSnapshot = false;
+    let hasCyclesSnapshot = false;
+    let hasSettingsSnapshot = false;
+    let hasMembersSnapshot = false;
 
-    const emit = () => onChange({ couple, cycles, settings, members });
+    const emit = () => {
+      if (!hasCoupleSnapshot || !hasCyclesSnapshot || !hasSettingsSnapshot || !hasMembersSnapshot) {
+        return;
+      }
+
+      onChange({ couple, cycles, settings, members });
+    };
 
     const unsubscribers = [
       onSnapshot(doc(db, 'couples', coupleId), snapshot => {
+        hasCoupleSnapshot = true;
         couple = snapshot.exists() ? toCouple(snapshot.id, snapshot.data()) : null;
         emit();
       }, onError),
       onSnapshot(query(collection(db, 'couples', coupleId, 'cycles'), orderBy('startDate', 'asc')), snapshot => {
+        hasCyclesSnapshot = true;
         cycles = snapshot.docs.map(item => toCycle(item.id, item.data()));
         emit();
       }, onError),
       onSnapshot(doc(db, 'couples', coupleId, 'settings', 'app'), snapshot => {
+        hasSettingsSnapshot = true;
         if (snapshot.exists()) {
           const data = snapshot.data();
           settings = {
@@ -287,6 +300,7 @@ export const firestoreCycleRepository: CloudRepository = {
         emit();
       }, onError),
       onSnapshot(collection(db, 'couples', coupleId, 'members'), snapshot => {
+        hasMembersSnapshot = true;
         members = snapshot.docs.map(item => toMember(item.id, item.data()));
         emit();
       }, onError),

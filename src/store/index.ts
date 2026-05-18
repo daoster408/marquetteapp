@@ -36,6 +36,8 @@ const defaultSettings: AppSettings = {
 let authUnsubscribe: (() => void) | null = null;
 let workspaceUnsubscribe: (() => void) | null = null;
 let cloudRepository: CloudRepository | null = null;
+let authRestoreTimeout: ReturnType<typeof setTimeout> | null = null;
+let workspaceSyncTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function getCloudRepository(): CloudRepository {
   if (!cloudRepository) {
@@ -54,7 +56,18 @@ function getCurrentCycleId(cycles: Cycle[]): string | null {
 }
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong.';
+  if (error instanceof Error) {
+    const code = (error as { code?: string }).code;
+    if (code === 'auth/account-exists-with-different-credential') {
+      return 'That Google email already has a password account. Sign in with email/password once so we can link Google safely.';
+    }
+    if (code === 'auth/invalid-credential') {
+      return 'Google sign-in returned an invalid credential for Firebase. Try again after reopening the app.';
+    }
+    return error.message;
+  }
+
+  return 'Something went wrong.';
 }
 
 interface CycleState {
@@ -151,9 +164,12 @@ export const useCycleStore = create<CycleState>()(
 
       const subscribeToWorkspace = (coupleId: string) => {
         workspaceUnsubscribe?.();
+        workspaceSyncTimeout && clearTimeout(workspaceSyncTimeout);
+
         workspaceUnsubscribe = getCloudRepository().subscribeToWorkspace(
           coupleId,
           data => {
+            workspaceSyncTimeout && clearTimeout(workspaceSyncTimeout);
             const activeMember = getActiveMember(data.members, get().cloudUser?.uid);
             const localSettings = get().settings;
 
@@ -182,8 +198,21 @@ export const useCycleStore = create<CycleState>()(
               cloudError: null,
             });
           },
-          error => set({ cloudMode: 'error', cloudError: getErrorMessage(error) })
+          error => {
+            workspaceSyncTimeout && clearTimeout(workspaceSyncTimeout);
+            set({ cloudMode: 'error', cloudError: getErrorMessage(error) });
+          }
         );
+
+        workspaceSyncTimeout = setTimeout(() => {
+          const state = get();
+          if (state.cloudMode === 'syncing' && state.activeCoupleId === coupleId) {
+            set({
+              cloudMode: 'error',
+              cloudError: 'Cloud sync is taking too long. Check your connection and reopen the app.',
+            });
+          }
+        }, 20000);
       };
 
       return {
@@ -231,10 +260,20 @@ export const useCycleStore = create<CycleState>()(
           });
 
           if (!cloudConfigured || authUnsubscribe) return;
+          authRestoreTimeout && clearTimeout(authRestoreTimeout);
+          authRestoreTimeout = setTimeout(() => {
+            if (get().cloudMode === 'restoring-auth') {
+              set({
+                cloudMode: 'signed-out',
+                cloudError: 'Sign-in restore is taking too long. Sign in again to continue.',
+              });
+            }
+          }, 15000);
 
           try {
             authUnsubscribe = repository.subscribeToAuth(
               user => {
+                authRestoreTimeout && clearTimeout(authRestoreTimeout);
                 workspaceUnsubscribe?.();
                 workspaceUnsubscribe = null;
 
@@ -260,9 +299,13 @@ export const useCycleStore = create<CycleState>()(
                   subscribeToWorkspace(user.activeCoupleId);
                 }
               },
-              error => set({ cloudError: getErrorMessage(error), cloudMode: 'signed-out' })
+              error => {
+                authRestoreTimeout && clearTimeout(authRestoreTimeout);
+                set({ cloudError: getErrorMessage(error), cloudMode: 'signed-out' });
+              }
             );
           } catch (error) {
+            authRestoreTimeout && clearTimeout(authRestoreTimeout);
             set({
               cloudMode: 'local',
               cloudError: getErrorMessage(error),
