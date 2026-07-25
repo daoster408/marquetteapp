@@ -39,3 +39,16 @@ export function canUploadMigration(
 
   return { allowed: true };
 }
+
+export function shouldPromptForMigration(
+  snapshot: MigrationSnapshot | null,
+  coupleId: string | null | undefined,
+  dismissedCoupleIds: string[],
+  completedCoupleIds: string[]
+): boolean {
+  if (!snapshot || snapshot.cycles.length === 0 || !coupleId) return false;
+  if (dismissedCoupleIds.includes(coupleId)) return false;
+  if (completedCoupleIds.includes(coupleId)) return false;
+
+  return true;
+}

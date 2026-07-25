@@ -21,6 +21,7 @@ import {
   WorkspaceScreen,
 } from './src/screens';
 import { COLORS, STRINGS } from './src/constants';
+import { shouldPromptForMigration } from './src/services/cloudSync/migration';
 import { useCycleStore } from './src/store';
 
 // Custom theme
@@ -178,6 +179,8 @@ export default function App() {
     activeCoupleId,
     cloudMode,
     initializeCloudSync,
+    migrationCompletedCoupleIds,
+    migrationDismissedCoupleIds,
     pendingLocalMigration,
     settings,
   } = useCycleStore();
@@ -252,9 +255,12 @@ export default function App() {
   }
 
   const shouldShowMigration = cloudMode === 'ready' &&
-    activeCoupleId &&
-    pendingLocalMigration &&
-    pendingLocalMigration.cycles.length > 0;
+    shouldPromptForMigration(
+      pendingLocalMigration,
+      activeCoupleId,
+      migrationDismissedCoupleIds,
+      migrationCompletedCoupleIds
+    );
   const shouldShowAppLock = Boolean(settings.appLockEnabled) &&
     !isAppUnlocked &&
     (cloudMode === 'local' || cloudMode === 'ready' || cloudMode === 'error');

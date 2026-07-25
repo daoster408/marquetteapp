@@ -1,4 +1,9 @@
-import { createMigrationSnapshot, canUploadMigration, toSharedSettings } from '../services/cloudSync/migration';
+import {
+  createMigrationSnapshot,
+  canUploadMigration,
+  shouldPromptForMigration,
+  toSharedSettings,
+} from '../services/cloudSync/migration';
 import { isEmailInDogfoodAllowlist, normalizeDogfoodAccessEmail, parseDogfoodAllowedEmails } from '../services/cloudSync/access';
 import { formatInviteCode, hashInviteSecret, parseInviteCode } from '../services/cloudSync/inviteCodes';
 import { getActiveMember, isOwner } from '../services/cloudSync/repository';
@@ -46,6 +51,18 @@ describe('cloud sync migration', () => {
       allowed: false,
       reason: 'This family chart already has cloud cycle data. Export a backup before choosing a deliberate merge path.',
     });
+  });
+
+  it('does not prompt again after keeping the cloud family chart', () => {
+    const snapshot = createMigrationSnapshot([localCycle], 'cycle-1', settings);
+
+    expect(shouldPromptForMigration(snapshot, 'couple-1', ['couple-1'], [])).toBe(false);
+  });
+
+  it('does not prompt again after local data was uploaded', () => {
+    const snapshot = createMigrationSnapshot([localCycle], 'cycle-1', settings);
+
+    expect(shouldPromptForMigration(snapshot, 'couple-1', [], ['couple-1'])).toBe(false);
   });
 
   it('keeps device-only settings local when creating shared settings', () => {

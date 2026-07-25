@@ -86,6 +86,7 @@ interface CycleState {
   cloudError: string | null;
   latestInviteCode: string | null;
   pendingLocalMigration: MigrationSnapshot | null;
+  migrationDismissedCoupleIds: string[];
   migrationCompletedCoupleIds: string[];
 
   // Cloud actions
@@ -195,6 +196,11 @@ export const useCycleStore = create<CycleState>()(
                 conservativeMode: data.settings.conservativeMode,
                 intention: data.settings.intention,
               },
+              pendingLocalMigration:
+                get().migrationDismissedCoupleIds.includes(coupleId) ||
+                get().migrationCompletedCoupleIds.includes(coupleId)
+                  ? null
+                  : get().pendingLocalMigration,
               cloudError: null,
             });
           },
@@ -228,6 +234,7 @@ export const useCycleStore = create<CycleState>()(
         cloudError: null,
         latestInviteCode: null,
         pendingLocalMigration: null,
+        migrationDismissedCoupleIds: [],
         migrationCompletedCoupleIds: [],
 
         initializeCloudSync: () => {
@@ -398,7 +405,15 @@ export const useCycleStore = create<CycleState>()(
           }
         },
 
-        dismissLocalMigration: () => set({ pendingLocalMigration: null }),
+        dismissLocalMigration: () => {
+          const { activeCoupleId, migrationDismissedCoupleIds } = get();
+          set({
+            pendingLocalMigration: null,
+            migrationDismissedCoupleIds: activeCoupleId
+              ? [...new Set([...migrationDismissedCoupleIds, activeCoupleId])]
+              : migrationDismissedCoupleIds,
+          });
+        },
 
         createSpouseInviteCode: async () => {
           const { activeCoupleId, cloudUser, members } = get();
@@ -749,6 +764,7 @@ export const useCycleStore = create<CycleState>()(
         cycles: state.cycles,
         currentCycleId: state.currentCycleId,
         settings: state.settings,
+        migrationDismissedCoupleIds: state.migrationDismissedCoupleIds,
         migrationCompletedCoupleIds: state.migrationCompletedCoupleIds,
       }),
     }
